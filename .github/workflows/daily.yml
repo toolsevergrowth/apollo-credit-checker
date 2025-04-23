@@ -2,29 +2,28 @@ name: Daily Credit Summary
 
 on:
   schedule:
-    - cron: "0 2 * * *"  # Daily at 2 AM UTC
-  workflow_dispatch:
+    - cron: '0 6 * * *'  # runs every day at 06:00 UTC
+  workflow_dispatch:     # allows manual triggering (for testing)
 
 jobs:
-  run:
+  daily-sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: '18'
 
       - name: Install dependencies
         run: npm install
 
-      - name: Run script
+      - name: Run daily credit tracker
+        run: node daily.js
         env:
           APOLLO_EMAIL: ${{ secrets.APOLLO_EMAIL }}
           APOLLO_PASSWORD: ${{ secrets.APOLLO_PASSWORD }}
-          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
-          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
-        run: node daily.js
-
+          SHEET_ID: ${{ secrets.SHEET_ID }}
+          GOOGLE_SERVICE_KEY: ${{ secrets.GOOGLE_SERVICE_KEY }}
