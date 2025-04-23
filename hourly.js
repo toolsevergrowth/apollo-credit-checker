@@ -15,22 +15,20 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
   try {
     console.log('🔐 Navigating to Apollo...');
-    await page.goto('https://app.apollo.io/#/login', { timeout: 60000 });
+    await page.goto('https://app.apollo.io/#/login', { timeout: 90000 });
     await page.screenshot({ path: '1_login_page.png' });
 
+    console.log('🔐 Waiting for login form...');
+    await page.waitForSelector('input[type="email"]', { timeout: 90000 });
+
     console.log('🔐 Filling login form...');
-    try {
-      await page.fill('input[type="email"]', email);
-      await page.fill('input[type="password"]', password);
-      await page.screenshot({ path: '2_filled_login.png' });
-    } catch (fillErr) {
-      await page.screenshot({ path: 'error_fill_login.png' });
-      throw new Error(`❌ Failed to fill login form: ${fillErr.message}`);
-    }
+    await page.fill('input[type="email"]', email);
+    await page.fill('input[type="password"]', password);
+    await page.screenshot({ path: '2_filled_login.png' });
 
     console.log('🔐 Submitting login form...');
     await page.click('button[type="submit"]');
-    await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 60000 });
+    await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 90000 });
     await page.screenshot({ path: '3_after_login.png' });
 
     console.log('📡 Fetching credit usage via API...');
