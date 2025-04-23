@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import fs from 'fs';
 import { google } from 'googleapis';
 
-// Load env vars
+// ✅ Load environment variables at the top
 const email = process.env.APOLLO_EMAIL;
 const password = process.env.APOLLO_PASSWORD;
 const sheetId = process.env.GOOGLE_SHEET_ID;
@@ -16,68 +16,64 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
   try {
     console.log('🔐 Navigating to Apollo...');
-    await page.goto('https://app.apollo.io/#/login', { waitUntil: 'domcontentloaded' });
-    await page.screenshot({ path: '1-login-page.png' });
+    await page.goto('https://app.apollo.io/#/login', { timeout: 60000 });
+    await page.screenshot({ path: '1_login_page.png' });
 
     console.log('🔐 Filling login form...');
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', password);
-    await page.screenshot({ path: '2-filled-login.png' });
+    await page.screenshot({ path: '2_filled_login.png' });
 
-    await page.click('button:has-text("Log In")');
-    await page.waitForLoadState('networkidle');
-    await page.screenshot({ path: '3-after-login.png' });
+    console.log('🔐 Submitting login form...');
+    await page.click('button[type="submit"]');
+    await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 60000 });
+    await page.screenshot({ path: '3_after_login.png' });
 
-    console.log('🌐 Extracting CSRF token and cookies...');
-    const cookies = await context.cookies();
-    const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ');
-    const csrfCookie = cookies.find(c => c.name === 'X-CSRF-TOKEN');
-    const csrfToken = csrfCookie?.value;
-
-    if (!csrfToken) throw new Error('❌ CSRF token not found');
-
-    console.log('📊 Fetching credit usage...');
+    console.log('📡 Fetching credit usage via API...');
     const response = await page.request.post('https://app.apollo.io/api/v1/credit_usages/credit_usage_by_user', {
-      headers: {
-        'x-csrf-token': csrfToken,
-        'cookie': cookieHeader,
-        'content-type': 'application/json'
-      },
       data: {
         min_date: '2025-03-27T11:58:44.000+00:00',
         max_date: '2025-04-27T11:58:45.000+00:00',
         for_current_billing_cycle: true,
         user_ids: [],
         cacheKey: Date.now()
+      },
+      headers: {
+        'content-type': 'application/json'
       }
     });
 
     const json = await response.json();
-    const { email, direct_dial, export: exp, ai } = json.team_credit_usage;
-    const { limit } = json.user_id_to_credit_usage[Object.keys(json.user_id_to_credit_usage)[0]].email;
-    const totalUsed = email + direct_dial + exp + ai;
+    const totalUsed = json.team_credit_usage.email + json.team_credit_usage.direct_dial + json.team_credit_usage.export + json.team_credit_usage.ai;
+    const userId = Object.keys(json.user_id_to_credit_usage)[0];
+    const totalLimit = json.user_id_to_credit_usage[userId]?.email?.limit || 0;
 
-    console.log(`✅ Used: ${totalUsed}, Limit: ${limit}`);
+    console.log(`✅ Total Used: ${totalUsed}`);
+    console.log(`✅ Total Limit: ${totalLimit}`);
 
-    // Google Sheets Write
-    const auth = new google.auth.GoogleAuth({
-      credentials: serviceAccount,
-      scopes: ['https://www.googleapis.com/auth/spreadsheets']
-    });
-    const sheets = google.sheets({ version: 'v4', auth: await auth.getClient() });
+    console.log('📄 Updating Google Sheet...');
+    const jwtClient = new google.auth.JWT(
+      serviceAccount.client_email,
+      null,
+      serviceAccount.private_key,
+      ['https://www.googleapis.com/auth/spreadsheets']
+    );
+
+    await jwtClient.authorize();
+    const sheets = google.sheets({ version: 'v4', auth: jwtClient });
+
     await sheets.spreadsheets.values.update({
       spreadsheetId: sheetId,
       range: 'Sheet1!A1:B1',
       valueInputOption: 'RAW',
       requestBody: {
-        values: [[totalUsed, limit]]
-      }
+        values: [[totalUsed, totalLimit]],
+      },
     });
 
-    console.log('📤 Synced to Google Sheets');
-  } catch (error) {
-    console.error('❌ Error:', error.message);
-    await page.screenshot({ path: 'error.png' });
+    console.log('✅ Sheet updated successfully.');
+  } catch (err) {
+    console.error('❌ Error:', err.message);
   } finally {
     await browser.close();
   }
