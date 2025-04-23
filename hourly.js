@@ -2,7 +2,6 @@ import { chromium } from 'playwright';
 import fs from 'fs';
 import { google } from 'googleapis';
 
-// ✅ Load environment variables at the top
 const email = process.env.APOLLO_EMAIL;
 const password = process.env.APOLLO_PASSWORD;
 const sheetId = process.env.GOOGLE_SHEET_ID;
@@ -20,9 +19,14 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
     await page.screenshot({ path: '1_login_page.png' });
 
     console.log('🔐 Filling login form...');
-    await page.fill('input[type="email"]', email);
-    await page.fill('input[type="password"]', password);
-    await page.screenshot({ path: '2_filled_login.png' });
+    try {
+      await page.fill('input[type="email"]', email);
+      await page.fill('input[type="password"]', password);
+      await page.screenshot({ path: '2_filled_login.png' });
+    } catch (fillErr) {
+      await page.screenshot({ path: 'error_fill_login.png' });
+      throw new Error(`❌ Failed to fill login form: ${fillErr.message}`);
+    }
 
     console.log('🔐 Submitting login form...');
     await page.click('button[type="submit"]');
@@ -74,6 +78,7 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
     console.log('✅ Sheet updated successfully.');
   } catch (err) {
     console.error('❌ Error:', err.message);
+    await page.screenshot({ path: 'error_general.png' });
   } finally {
     await browser.close();
   }
