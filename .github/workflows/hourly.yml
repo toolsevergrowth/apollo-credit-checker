@@ -1,11 +1,11 @@
-- name: Run script
-  env:
-    APOLLO_EMAIL: ${{ secrets.APOLLO_EMAIL }}
-    APOLLO_PASSWORD: ${{ secrets.APOLLO_PASSWORD }}
-    GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
-    GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
-  run: |
-    echo "🔍 Checking env vars..."
-    echo "GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID:+SET}"
-    echo "GOOGLE_SERVICE_ACCOUNT=${GOOGLE_SERVICE_ACCOUNT:+SET}"
-    node hourly.js
+      - name: Run script
+        env:
+          APOLLO_EMAIL: ${{ secrets.APOLLO_EMAIL }}
+          APOLLO_PASSWORD: ${{ secrets.APOLLO_PASSWORD }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+        run: |
+          echo "🔍 Checking env vars..."
+          echo "GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID:+SET}"
+          echo "GOOGLE_SERVICE_ACCOUNT=${GOOGLE_SERVICE_ACCOUNT:+SET}"
+          node hourly.js
