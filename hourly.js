@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+import fetch from 'node-fetch';
 
 async function loginToApollo(email, password) {
   const response = await fetch('https://app.apollo.io/api/v1/mixed_login', {
@@ -22,8 +22,10 @@ async function loginToApollo(email, password) {
     throw new Error(`Login failed with status ${response.status}: ${errText}`);
   }
 
-  const setCookies = response.headers.raw()['set-cookie'];
-  const cookieHeader = setCookies.map(c => c.split(';')[0]).join('; ');
+  const setCookies = response.headers.getSetCookie?.() || response.headers.raw()['set-cookie'];
+  const cookieHeader = Array.isArray(setCookies)
+    ? setCookies.map(c => c.split(';')[0]).join('; ')
+    : setCookies;
 
   const json = await response.json();
   console.log('✅ Logged into Apollo');
@@ -31,17 +33,14 @@ async function loginToApollo(email, password) {
   return { cookieHeader, json };
 }
 
-// Example usage
-(async () => {
-  try {
-    const { cookieHeader } = await loginToApollo(
-      process.env.APOLLO_EMAIL,
-      process.env.APOLLO_PASSWORD
-    );
+const email = process.env.APOLLO_EMAIL;
+const password = process.env.APOLLO_PASSWORD;
 
-    console.log('🔐 Apollo cookie:', cookieHeader); // ← Use in follow-up requests
-  } catch (err) {
+loginToApollo(email, password)
+  .then(({ cookieHeader }) => {
+    console.log('🔐 Apollo cookie:', cookieHeader);
+  })
+  .catch(err => {
     console.error('❌ Apollo login failed:', err.message);
     process.exit(1);
-  }
-})();
+  });
