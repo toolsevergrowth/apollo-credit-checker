@@ -1,92 +1,47 @@
-import fetch from 'node-fetch';
-import { google } from 'googleapis';
+const fetch = require('node-fetch');
 
-const {
-  APOLLO_EMAIL,
-  APOLLO_PASSWORD,
-  GOOGLE_SHEET_ID,
-  GOOGLE_SERVICE_ACCOUNT
-} = process.env;
-
-const sheetId = GOOGLE_SHEET_ID;
-const credentials = JSON.parse(GOOGLE_SERVICE_ACCOUNT);
-
-// --- Authenticate with Google Sheets API ---
-const auth = new google.auth.GoogleAuth({
-  credentials,
-  scopes: ['https://www.googleapis.com/auth/spreadsheets']
-});
-
-const sheets = google.sheets({ version: 'v4', auth });
-
-// --- Login to Apollo ---
-const login = async () => {
-  const res = await fetch('https://app.apollo.io/api/v1/auth/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: APOLLO_EMAIL,
-      password: APOLLO_PASSWORD
-    })
-  });
-
-  const cookies = res.headers.get('set-cookie');
-  const csrfToken = res.headers.get('x-csrf-token');
-
-  if (!cookies || !csrfToken) {
-    throw new Error('Failed to login to Apollo');
-  }
-
-  return { cookies, csrfToken };
-};
-
-// --- Fetch credit usage from Apollo ---
-const getCreditUsage = async (cookies, csrfToken) => {
-  const res = await fetch('https://app.apollo.io/api/v1/credit_usages/credit_usage_by_user', {
+async function loginToApollo(email, password) {
+  const response = await fetch('https://app.apollo.io/api/v1/mixed_login', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-CSRF-Token': csrfToken,
-      Cookie: cookies
+      'Origin': 'https://app.apollo.io',
+      'Referer': 'https://app.apollo.io/',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36'
     },
     body: JSON.stringify({
-      min_date: null,
-      max_date: null,
-      for_current_billing_cycle: true,
-      user_ids: [],
-      cacheKey: ''
+      email,
+      password,
+      cacheKey: Date.now(),
+      timezone_offset: -180
     })
   });
 
-  const json = await res.json();
-  const used = json?.total_usage?.used || 0;
-  const limit = json?.total_usage?.limit || 0;
-  return { used, limit };
-};
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Login failed with status ${response.status}: ${errText}`);
+  }
 
-// --- Write to Google Sheets ---
-const updateSheet = async (used, limit) => {
-  const values = [[`Used: ${used}`, `Limit: ${limit}`]];
-  await sheets.spreadsheets.values.update({
-    spreadsheetId: sheetId,
-    range: 'Sheet1!A1:B1',
-    valueInputOption: 'RAW',
-    requestBody: { values }
-  });
-  console.log(`✅ Updated sheet with credits: ${used} / ${limit}`);
-};
+  const setCookies = response.headers.raw()['set-cookie'];
+  const cookieHeader = setCookies.map(c => c.split(';')[0]).join('; ');
 
-const main = async () => {
+  const json = await response.json();
+  console.log('✅ Logged into Apollo');
+
+  return { cookieHeader, json };
+}
+
+// Example usage
+(async () => {
   try {
-    const { cookies, csrfToken } = await login();
-    const { used, limit } = await getCreditUsage(cookies, csrfToken);
-    console.log(`📊 Apollo Credits Used: ${used}`);
-    console.log(`📈 Apollo Credit Limit: ${limit}`);
-    await updateSheet(used, limit);
+    const { cookieHeader } = await loginToApollo(
+      process.env.APOLLO_EMAIL,
+      process.env.APOLLO_PASSWORD
+    );
+
+    console.log('🔐 Apollo cookie:', cookieHeader); // ← Use in follow-up requests
   } catch (err) {
-    console.error('❌ Error:', err.message || err);
+    console.error('❌ Apollo login failed:', err.message);
     process.exit(1);
   }
-};
-
-main();
+})();
