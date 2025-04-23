@@ -1,4 +1,4 @@
-const { google } = require('googleapis');
+import { google } from 'googleapis';
 
 // Read env vars
 const sheetId = process.env.GOOGLE_SHEET_ID;
@@ -10,12 +10,11 @@ const auth = new google.auth.GoogleAuth({
   scopes: ['https://www.googleapis.com/auth/spreadsheets'],
 });
 
-// Initialize Sheets API client
 const sheets = google.sheets({ version: 'v4', auth });
 
 async function run() {
   const now = new Date().toISOString();
-  console.log('⏰ Updating Sheet1!A1 with timestamp:', now);
+  console.log('⏰ Writing timestamp:', now);
 
   try {
     await sheets.spreadsheets.values.update({
@@ -27,9 +26,9 @@ async function run() {
       },
     });
 
-    console.log('✅ Sheet updated successfully');
+    console.log('✅ Sheet1!A1 updated successfully');
   } catch (error) {
-    console.error('❌ Failed to update sheet:', error.message);
+    console.error('❌ Error updating sheet:', error.message);
     process.exit(1);
   }
 }
