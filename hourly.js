@@ -1,46 +1,65 @@
+// hourly.js
 import fetch from 'node-fetch';
+import { google } from 'googleapis';
 
-async function loginToApollo(email, password) {
-  const response = await fetch('https://app.apollo.io/api/v1/mixed_login', {
+const APOLLO_EMAIL = process.env.APOLLO_EMAIL;
+const APOLLO_PASSWORD = process.env.APOLLO_PASSWORD;
+const GOOGLE_SHEET_ID = process.env.GOOGLE_SHEET_ID;
+const GOOGLE_SERVICE_ACCOUNT = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
+
+const loginToApollo = async () => {
+  const res = await fetch('https://app.apollo.io/api/v1/auth/login', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'Origin': 'https://app.apollo.io',
-      'Referer': 'https://app.apollo.io/',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36'
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      email,
-      password,
-      cacheKey: Date.now(),
-      timezone_offset: -180
+      email: APOLLO_EMAIL,
+      password: APOLLO_PASSWORD
     })
   });
 
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Login failed with status ${response.status}: ${errText}`);
+  if (!res.ok) {
+    throw new Error(`Apollo login failed: ${res.status} - ${res.statusText}`);
   }
 
-  const setCookies = response.headers.getSetCookie?.() || response.headers.raw()['set-cookie'];
-  const cookieHeader = Array.isArray(setCookies)
-    ? setCookies.map(c => c.split(';')[0]).join('; ')
-    : setCookies;
+  const data = await res.json();
+  console.log('✅ Apollo login successful');
+  return data;
+};
 
-  const json = await response.json();
-  console.log('✅ Logged into Apollo');
+const updateSheet = async (timestamp) => {
+  const auth = new google.auth.JWT(
+    GOOGLE_SERVICE_ACCOUNT.client_email,
+    null,
+    GOOGLE_SERVICE_ACCOUNT.private_key,
+    ['https://www.googleapis.com/auth/spreadsheets']
+  );
 
-  return { cookieHeader, json };
-}
-
-const email = process.env.APOLLO_EMAIL;
-const password = process.env.APOLLO_PASSWORD;
-
-loginToApollo(email, password)
-  .then(({ cookieHeader }) => {
-    console.log('🔐 Apollo cookie:', cookieHeader);
-  })
-  .catch(err => {
-    console.error('❌ Apollo login failed:', err.message);
-    process.exit(1);
+  const sheets = google.sheets({ version: 'v4', auth });
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: GOOGLE_SHEET_ID,
+    range: 'Sheet1!A1',
+    valueInputOption: 'RAW',
+    requestBody: {
+      values: [[`Updated at: ${timestamp}`]]
+    }
   });
+  console.log('✅ Sheet1!A1 updated successfully');
+};
+
+(async () => {
+  console.log('🔍 Checking env vars...');
+  console.log('GOOGLE_SHEET_ID=' + (GOOGLE_SHEET_ID ? 'SET' : '')); 
+  console.log('GOOGLE_SERVICE_ACCOUNT=' + (GOOGLE_SERVICE_ACCOUNT ? 'SET' : ''));
+
+  try {
+    await loginToApollo();
+    const timestamp = new Date().toISOString();
+    console.log('⏰ Writing timestamp:', timestamp);
+    await updateSheet(timestamp);
+  } catch (err) {
+    console.error('❌ Error:', err.message);
+    process.exit(1);
+  }
+})();
