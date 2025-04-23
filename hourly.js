@@ -15,11 +15,11 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
   try {
     console.log('🔐 Navigating to Apollo...');
-    await page.goto('https://app.apollo.io/#/login', { timeout: 90000 });
+    await page.goto('https://app.apollo.io/#/login', { timeout: 900000 });
     await page.screenshot({ path: '1_login_page.png' });
 
     console.log('🔐 Waiting for login form...');
-    await page.waitForSelector('input[type="email"]', { timeout: 90000 });
+    await page.waitForSelector('input[type="email"]', { timeout: 900000 });
 
     console.log('🔐 Filling login form...');
     await page.fill('input[type="email"]', email);
@@ -28,7 +28,7 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
     console.log('🔐 Submitting login form...');
     await page.click('button[type="submit"]');
-    await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 90000 });
+    await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 900000 });
     await page.screenshot({ path: '3_after_login.png' });
 
     console.log('📡 Fetching credit usage via API...');
