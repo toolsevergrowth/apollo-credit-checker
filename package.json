@@ -9,7 +9,7 @@
   "dependencies": {
     "playwright": "^1.40.0",
     "playwright-extra": "^4.3.5",
-    "playwright-extra-plugin-stealth": "^2.11.1",
+    "playwright-extra-plugin-stealth": "^2.4.19",
     "googleapis": "^134.0.0"
   }
 }
