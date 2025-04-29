@@ -35,3 +35,10 @@ jobs:
           echo "GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID:+SET}"
           echo "GOOGLE_SERVICE_ACCOUNT=${GOOGLE_SERVICE_ACCOUNT:+SET}"
           node hourly.js
+
+      - name: Upload screenshot on failure
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: error-screenshot
+          path: error-screenshot.png
