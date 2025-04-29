@@ -37,7 +37,8 @@ jobs:
           node hourly.js
 
       - name: Upload screenshot on failure
-        if: failure()
+        if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@main
         with:
           name: error-screenshot
