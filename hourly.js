@@ -18,7 +18,7 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
     console.log("🔐 Navigating to Apollo login...");
     await page.goto('https://app.apollo.io/#/login', { waitUntil: 'networkidle' });
 
-    console.log("⌨️ Waiting for email input field...");
+    console.log("⌨️ Waiting for email input...");
     await page.waitForSelector('input[placeholder="Work Email"]', { timeout: 40000 });
 
     console.log("⌨️ Typing email...");
@@ -27,11 +27,12 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
     console.log("⌨️ Typing password...");
     await page.fill('input[placeholder="Enter your password"]', password);
 
-    console.log("🔐 Clicking Log In...");
-    await page.click('button:has-text("Log In")');
+    console.log("🔐 Clicking email login button only...");
+    const loginButton = await page.locator('button:has-text("Log In")').first();
+    await loginButton.click();
 
-    console.log("⏳ Waiting for dashboard to initialize...");
-    await page.waitForTimeout(15000); // adjust as needed
+    console.log("⏳ Waiting for Apollo dashboard...");
+    await page.waitForURL('**/app/**', { timeout: 20000 });
 
     console.log("📤 Fetching credit usage...");
     const res = await page.request.post('https://app.apollo.io/api/v1/credit_usages/credit_usage_by_user', {
@@ -44,7 +45,14 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
       }
     });
 
-    const json = await res.json();
+    const body = await res.text();
+    let json;
+    try {
+      json = JSON.parse(body);
+    } catch (e) {
+      throw new Error(`Invalid JSON response from Apollo:\n${body}`);
+    }
+
     const used = json.team_credit_usage?.email ?? 0;
     const limit = json.user_id_to_credit_usage
       ? Object.values(json.user_id_to_credit_usage)[0].email.limit
@@ -74,15 +82,10 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
   } catch (err) {
     console.error("❌ Error:", err.message);
 
-    // 📸 Capture screenshot for debugging
     try {
       const screenshotPath = 'error-screenshot.png';
       await page.screenshot({ path: screenshotPath, fullPage: true });
-      if (fs.existsSync(screenshotPath)) {
-        console.log("📸 Screenshot successfully saved to:", screenshotPath);
-      } else {
-        console.error("⚠️ Screenshot file was not created.");
-      }
+      console.log("📸 Screenshot saved to:", screenshotPath);
     } catch (screenshotError) {
       console.error("⚠️ Screenshot capture failed:", screenshotError.message);
     }
