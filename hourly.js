@@ -1,8 +1,11 @@
-const { chromium } = require('playwright');
-const { google } = require('googleapis');
 const fs = require('fs');
+const { google } = require('googleapis');
+const { chromium: baseChromium } = require('playwright-extra');
+const stealth = require('playwright-extra-plugin-stealth')();
 
-console.log("🔐 Launching browser...");
+baseChromium.use(stealth);
+
+console.log("🔐 Launching browser with stealth...");
 
 const email = process.env.APOLLO_EMAIL;
 const password = process.env.APOLLO_PASSWORD;
@@ -10,9 +13,14 @@ const sheetId = process.env.GOOGLE_SHEET_ID;
 const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext();
-  const page = await context.newPage();
+  const browser = await baseChromium.launchPersistentContext('/tmp/apollo-user', {
+    headless: true,
+    viewport: { width: 1280, height: 800 },
+    locale: 'en-US',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+  });
+
+  const page = await browser.newPage();
 
   try {
     console.log("🔐 Navigating to Apollo login...");
@@ -27,13 +35,18 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
     console.log("⌨️ Typing password...");
     await page.fill('input[placeholder="Enter your password"]', password);
 
-    console.log("🔐 Submitting login form (not Google login)...");
+    console.log("🔐 Submitting login form (not Google)...");
     await page.locator('input[placeholder="Enter your password"]').evaluate((el) => {
       el.form.querySelector('button[type="submit"]').click();
     });
 
-    console.log("⏳ Waiting for Apollo dashboard...");
-    await page.waitForTimeout(15000); // Can be replaced by waitForURL if needed
+    console.log("⏳ Waiting for post-login redirect...");
+    await page.waitForTimeout(15000);
+
+    const url = page.url();
+    if (url.includes('google.com') || url.includes('cloudflare')) {
+      throw new Error("Blocked by CAPTCHA or redirected to Google login.");
+    }
 
     console.log("📤 Fetching credit usage...");
     const res = await page.request.post('https://app.apollo.io/api/v1/credit_usages/credit_usage_by_user', {
