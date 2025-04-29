@@ -74,12 +74,17 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
   } catch (err) {
     console.error("❌ Error:", err.message);
 
-    // 📸 Take screenshot for debugging
+    // 📸 Try saving a screenshot
     try {
-      await page.screenshot({ path: 'error-screenshot.png', fullPage: true });
-      console.log("📸 Saved error screenshot to error-screenshot.png");
+      const screenshotPath = 'error-screenshot.png';
+      await page.screenshot({ path: screenshotPath, fullPage: true });
+      if (fs.existsSync(screenshotPath)) {
+        console.log("📸 Screenshot successfully saved to:", screenshotPath);
+      } else {
+        console.error("⚠️ Screenshot file was not created.");
+      }
     } catch (screenshotError) {
-      console.error("⚠️ Failed to take screenshot:", screenshotError.message);
+      console.error("⚠️ Screenshot capture failed:", screenshotError.message);
     }
   } finally {
     await browser.close();
