@@ -1,5 +1,6 @@
 const { chromium } = require('playwright');
 const { google } = require('googleapis');
+const fs = require('fs');
 
 console.log("🔐 Launching browser...");
 
@@ -15,7 +16,10 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
   try {
     console.log("🔐 Navigating to Apollo login...");
-    await page.goto('https://app.apollo.io/#/login', { timeout: 60000 });
+    await page.goto('https://app.apollo.io/login', { waitUntil: 'networkidle' });
+
+    console.log("⌨️ Waiting for email field...");
+    await page.waitForSelector('input[type="email"]', { timeout: 30000 });
 
     console.log("⌨️ Typing email...");
     await page.fill('input[type="email"]', email);
@@ -27,7 +31,7 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
     await page.click('button:has-text("Log In")');
 
     console.log("⏳ Waiting for dashboard...");
-    await page.waitForTimeout(15000); // Wait for session
+    await page.waitForTimeout(15000); // Let session load
 
     console.log("📤 Fetching credit usage...");
     const res = await page.request.post('https://app.apollo.io/api/v1/credit_usages/credit_usage_by_user', {
@@ -69,6 +73,14 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
     console.log("✅ Sheet updated.");
   } catch (err) {
     console.error("❌ Error:", err.message);
+
+    // 📸 Take screenshot for debugging
+    try {
+      await page.screenshot({ path: 'error-screenshot.png', fullPage: true });
+      console.log("📸 Saved error screenshot to error-screenshot.png");
+    } catch (screenshotError) {
+      console.error("⚠️ Failed to take screenshot:", screenshotError.message);
+    }
   } finally {
     await browser.close();
   }
