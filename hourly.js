@@ -1,9 +1,9 @@
 const fs = require('fs');
 const { google } = require('googleapis');
-const { chromium } = require('playwright-extra');
-const StealthPlugin = require('puppeteer-extra-plugin-stealth')();
+const { chromium: baseChromium } = require('playwright-extra');
+const stealth = require('puppeteer-extra-plugin-stealth')();
 
-chromium.use(StealthPlugin);
+baseChromium.use(stealth);
 
 console.log("🔐 Launching browser with stealth...");
 
