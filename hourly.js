@@ -43,20 +43,24 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
       await page.waitForSelector('input[placeholder="Enter code"]', { timeout: 10000 });
 
       console.log("🔁 Clicking 'Resend code'...");
-      await page.click('text=Resend code');
+      const resendVisible = await page.isVisible('text=Resend code');
+      if (resendVisible) {
+        await page.click('text=Resend code');
+      } else {
+        console.warn("⚠️ Resend button not visible.");
+      }
 
-      console.log("📥 Waiting for code in Google Sheet A1...");
+      console.log("📥 Waiting up to 60s for 2FA code from Google Sheet A1...");
+
       const auth = new google.auth.JWT({
         email: serviceAccount.client_email,
         key: serviceAccount.private_key,
         scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
       });
-
       const sheets = google.sheets({ version: 'v4', auth });
 
       let code = '';
-      const maxAttempts = 10;
-
+      const maxAttempts = 4; // 4 tries every 15s = 60s
       for (let i = 0; i < maxAttempts; i++) {
         const res = await sheets.spreadsheets.values.get({
           spreadsheetId: sheetId,
@@ -75,7 +79,7 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
       }
 
       if (!code) {
-        throw new Error("2FA code not found in A1 after waiting.");
+        throw new Error("❌ 2FA code not found in A1 within 60 seconds.");
       }
 
       console.log("⌨️ Entering 2FA code...");
@@ -114,16 +118,16 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
     console.log(`📈 Used: ${used}, Limit: ${limit}`);
 
-    console.log("📄 Connecting to Google Sheets to update usage...");
-    const auth = new google.auth.JWT({
+    console.log("📄 Updating usage in Google Sheet...");
+    const writeAuth = new google.auth.JWT({
       email: serviceAccount.client_email,
       key: serviceAccount.private_key,
       scopes: ['https://www.googleapis.com/auth/spreadsheets']
     });
 
-    const sheets = google.sheets({ version: 'v4', auth });
+    const writeSheets = google.sheets({ version: 'v4', auth: writeAuth });
 
-    await sheets.spreadsheets.values.update({
+    await writeSheets.spreadsheets.values.update({
       spreadsheetId: sheetId,
       range: 'Sheet1!A1:B1',
       valueInputOption: 'RAW',
