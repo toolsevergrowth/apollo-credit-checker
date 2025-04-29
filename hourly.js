@@ -18,20 +18,20 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
     console.log("🔐 Navigating to Apollo login...");
     await page.goto('https://app.apollo.io/#/login', { waitUntil: 'networkidle' });
 
-    console.log("⌨️ Waiting for email field...");
-    await page.waitForSelector('input[type="email"]', { timeout: 40000 });
+    console.log("⌨️ Waiting for email input field...");
+    await page.waitForSelector('input[placeholder="Work Email"]', { timeout: 40000 });
 
     console.log("⌨️ Typing email...");
-    await page.fill('input[type="email"]', email);
-    await page.click('button:has-text("Next")');
+    await page.fill('input[placeholder="Work Email"]', email);
 
-    console.log("⌨️ Waiting for password field...");
-    await page.waitForSelector('input[type="password"]', { timeout: 30000 });
-    await page.fill('input[type="password"]', password);
+    console.log("⌨️ Typing password...");
+    await page.fill('input[placeholder="Enter your password"]', password);
+
+    console.log("🔐 Clicking Log In...");
     await page.click('button:has-text("Log In")');
 
-    console.log("⏳ Waiting for dashboard...");
-    await page.waitForTimeout(15000);
+    console.log("⏳ Waiting for dashboard to initialize...");
+    await page.waitForTimeout(15000); // adjust as needed
 
     console.log("📤 Fetching credit usage...");
     const res = await page.request.post('https://app.apollo.io/api/v1/credit_usages/credit_usage_by_user', {
@@ -74,7 +74,7 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
   } catch (err) {
     console.error("❌ Error:", err.message);
 
-    // 📸 Try saving a screenshot
+    // 📸 Capture screenshot for debugging
     try {
       const screenshotPath = 'error-screenshot.png';
       await page.screenshot({ path: screenshotPath, fullPage: true });
