@@ -16,22 +16,22 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
   try {
     console.log("🔐 Navigating to Apollo login...");
-    await page.goto('https://app.apollo.io/login', { waitUntil: 'networkidle' });
+    await page.goto('https://app.apollo.io/#/login', { waitUntil: 'networkidle' });
 
     console.log("⌨️ Waiting for email field...");
-    await page.waitForSelector('input[type="email"]', { timeout: 30000 });
+    await page.waitForSelector('input[type="email"]', { timeout: 40000 });
 
     console.log("⌨️ Typing email...");
     await page.fill('input[type="email"]', email);
     await page.click('button:has-text("Next")');
 
-    console.log("⌨️ Typing password...");
-    await page.waitForSelector('input[type="password"]', { timeout: 20000 });
+    console.log("⌨️ Waiting for password field...");
+    await page.waitForSelector('input[type="password"]', { timeout: 30000 });
     await page.fill('input[type="password"]', password);
     await page.click('button:has-text("Log In")');
 
     console.log("⏳ Waiting for dashboard...");
-    await page.waitForTimeout(15000); // Let session load
+    await page.waitForTimeout(15000);
 
     console.log("📤 Fetching credit usage...");
     const res = await page.request.post('https://app.apollo.io/api/v1/credit_usages/credit_usage_by_user', {
