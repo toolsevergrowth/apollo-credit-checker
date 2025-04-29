@@ -1,6 +1,5 @@
-import { chromium } from 'playwright';
-import { GoogleSpreadsheet } from 'google-spreadsheet';
-import { JWT } from 'google-auth-library';
+const { chromium } = require('playwright');
+const { google } = require('googleapis');
 
 console.log("🔐 Launching browser...");
 
@@ -28,7 +27,7 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
     await page.click('button:has-text("Log In")');
 
     console.log("⏳ Waiting for dashboard...");
-    await page.waitForTimeout(15000); // Let the session initialize
+    await page.waitForTimeout(15000); // Wait for session
 
     console.log("📤 Fetching credit usage...");
     const res = await page.request.post('https://app.apollo.io/api/v1/credit_usages/credit_usage_by_user', {
@@ -42,8 +41,6 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
     });
 
     const json = await res.json();
-    console.log("📦 Response:", JSON.stringify(json));
-
     const used = json.team_credit_usage?.email ?? 0;
     const limit = json.user_id_to_credit_usage
       ? Object.values(json.user_id_to_credit_usage)[0].email.limit
@@ -52,19 +49,22 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
     console.log(`📈 Used: ${used}, Limit: ${limit}`);
 
     console.log("📄 Connecting to Google Sheets...");
-    const auth = new JWT({
+    const auth = new google.auth.JWT({
       email: serviceAccount.client_email,
       key: serviceAccount.private_key,
       scopes: ['https://www.googleapis.com/auth/spreadsheets']
     });
 
-    const doc = new GoogleSpreadsheet(sheetId, auth);
-    await doc.loadInfo();
-    const sheet = doc.sheetsByTitle['Sheet1'];
-    await sheet.loadCells('A1:B1');
-    sheet.getCell(0, 0).value = used;
-    sheet.getCell(0, 1).value = limit;
-    await sheet.saveUpdatedCells();
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: sheetId,
+      range: 'Sheet1!A1:B1',
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [[used, limit]]
+      }
+    });
 
     console.log("✅ Sheet updated.");
   } catch (err) {
