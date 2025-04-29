@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Auto sync Apollo credit usage to Google Sheets",
   "main": "hourly.js",
-  "type": "module",
   "scripts": {
     "start": "node hourly.js"
   },
