@@ -1,9 +1,9 @@
 const fs = require('fs');
 const { google } = require('googleapis');
 const { chromium: baseChromium } = require('playwright-extra');
-const stealth = require('puppeteer-extra-plugin-stealth')();
+const StealthPlugin = require('puppeteer-extra-plugin-stealth')();
 
-baseChromium.use(stealth);
+baseChromium.use(StealthPlugin);
 
 console.log("🔐 Launching browser with stealth...");
 
@@ -26,26 +26,66 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
     console.log("🔐 Navigating to Apollo login...");
     await page.goto('https://app.apollo.io/#/login', { waitUntil: 'networkidle' });
 
-    console.log("⌨️ Waiting for email input...");
-    await page.waitForSelector('input[placeholder="Work Email"]', { timeout: 40000 });
-
     console.log("⌨️ Typing email...");
     await page.fill('input[placeholder="Work Email"]', email);
 
     console.log("⌨️ Typing password...");
     await page.fill('input[placeholder="Enter your password"]', password);
 
-    console.log("🔐 Submitting login form (not Google)...");
-    await page.locator('input[placeholder="Enter your password"]').evaluate((el) => {
+    console.log("🔐 Submitting login form...");
+    await page.locator('input[placeholder="Enter your password"]').evaluate(el => {
       el.form.querySelector('button[type="submit"]').click();
     });
 
-    console.log("⏳ Waiting for post-login redirect...");
-    await page.waitForTimeout(15000);
+    console.log("⏳ Waiting for 2FA screen or dashboard...");
 
-    const url = page.url();
-    if (url.includes('google.com') || url.includes('cloudflare')) {
-      throw new Error("Blocked by CAPTCHA or redirected to Google login.");
+    try {
+      await page.waitForSelector('input[placeholder="Enter code"]', { timeout: 10000 });
+
+      console.log("🔁 Clicking 'Resend code'...");
+      await page.click('text=Resend code');
+
+      console.log("📥 Waiting for code in Google Sheet A1...");
+      const auth = new google.auth.JWT({
+        email: serviceAccount.client_email,
+        key: serviceAccount.private_key,
+        scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly']
+      });
+
+      const sheets = google.sheets({ version: 'v4', auth });
+
+      let code = '';
+      const maxAttempts = 10;
+
+      for (let i = 0; i < maxAttempts; i++) {
+        const res = await sheets.spreadsheets.values.get({
+          spreadsheetId: sheetId,
+          range: 'Sheet1!A1'
+        });
+
+        const val = res.data.values?.[0]?.[0] ?? '';
+        if (/^\d{6}$/.test(val)) {
+          code = val;
+          console.log(`✅ Code found: ${code}`);
+          break;
+        }
+
+        console.log("⏳ No code yet, retrying in 15 seconds...");
+        await new Promise(r => setTimeout(r, 15000));
+      }
+
+      if (!code) {
+        throw new Error("2FA code not found in A1 after waiting.");
+      }
+
+      console.log("⌨️ Entering 2FA code...");
+      await page.fill('input[placeholder="Enter code"]', code);
+      await page.click('button:has-text("Continue")');
+
+      console.log("✅ Code submitted. Waiting for dashboard...");
+      await page.waitForTimeout(10000);
+    } catch (e) {
+      console.log("🟢 2FA screen not detected, likely already authenticated.");
     }
 
     console.log("📤 Fetching credit usage...");
@@ -74,7 +114,7 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
     console.log(`📈 Used: ${used}, Limit: ${limit}`);
 
-    console.log("📄 Connecting to Google Sheets...");
+    console.log("📄 Connecting to Google Sheets to update usage...");
     const auth = new google.auth.JWT({
       email: serviceAccount.client_email,
       key: serviceAccount.private_key,
