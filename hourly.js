@@ -1,83 +1,79 @@
-import { chromium } from 'playwright';
-import fs from 'fs';
-import { google } from 'googleapis';
+const { chromium } = require('playwright');
+const { GoogleSpreadsheet } = require('google-spreadsheet');
 
-const email = process.env.APOLLO_EMAIL;
-const password = process.env.APOLLO_PASSWORD;
-const sheetId = process.env.GOOGLE_SHEET_ID;
-const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
+const APOLLO_EMAIL = process.env.APOLLO_EMAIL;
+const APOLLO_PASSWORD = process.env.APOLLO_PASSWORD;
+const SHEET_ID = process.env.GOOGLE_SHEET_ID;
+const SERVICE_ACCOUNT = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
-(async () => {
-  console.log('🔐 Launching browser...');
+async function main() {
+  console.log("🔐 Launching browser...");
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   const page = await context.newPage();
 
-  try {
-    console.log('🔐 Navigating to Apollo...');
-    await page.goto('https://app.apollo.io/#/login', { timeout: 900000 });
-    await page.screenshot({ path: '1_login_page.png' });
+  console.log("🔐 Navigating to Apollo...");
+  await page.goto('https://app.apollo.io/#/login', { waitUntil: 'load' });
 
-    console.log('🔐 Waiting for login form...');
-    await page.waitForSelector('input[type="email"]', { timeout: 900000 });
+  console.log("🔐 Waiting for login form...");
+  await page.waitForSelector('input[type="email"]', { timeout: 60000 });
+  await page.fill('input[type="email"]', APOLLO_EMAIL);
+  await page.fill('input[type="password"]', APOLLO_PASSWORD);
+  await page.click('button[type="submit"]');
 
-    console.log('🔐 Filling login form...');
-    await page.fill('input[type="email"]', email);
-    await page.fill('input[type="password"]', password);
-    await page.screenshot({ path: '2_filled_login.png' });
+  console.log("🔄 Waiting for dashboard to load...");
+  await page.waitForTimeout(10000); // Let the login process settle
 
-    console.log('🔐 Submitting login form...');
-    await page.click('button[type="submit"]');
-    await page.waitForNavigation({ waitUntil: 'networkidle', timeout: 900000 });
-    await page.screenshot({ path: '3_after_login.png' });
-
-    console.log('📡 Fetching credit usage via API...');
-    const response = await page.request.post('https://app.apollo.io/api/v1/credit_usages/credit_usage_by_user', {
-      data: {
-        min_date: '2025-03-27T11:58:44.000+00:00',
-        max_date: '2025-04-27T11:58:45.000+00:00',
+  console.log("📡 Fetching credit usage JSON...");
+  const response = await page.evaluate(async () => {
+    const res = await fetch('https://app.apollo.io/api/v1/credit_usages/credit_usage_by_user', {
+      method: 'POST',
+      headers: {
+        'accept': '*/*',
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({
+        min_date: "2025-03-27T11:58:44.000+00:00",
+        max_date: "2025-04-27T11:58:45.000+00:00",
         for_current_billing_cycle: true,
         user_ids: [],
         cacheKey: Date.now()
-      },
-      headers: {
-        'content-type': 'application/json'
-      }
+      })
     });
+    return await res.json();
+  });
 
-    const json = await response.json();
-    const totalUsed = json.team_credit_usage.email + json.team_credit_usage.direct_dial + json.team_credit_usage.export + json.team_credit_usage.ai;
-    const userId = Object.keys(json.user_id_to_credit_usage)[0];
-    const totalLimit = json.user_id_to_credit_usage[userId]?.email?.limit || 0;
+  await browser.close();
 
-    console.log(`✅ Total Used: ${totalUsed}`);
-    console.log(`✅ Total Limit: ${totalLimit}`);
+  const team = response?.team_credit_usage;
+  const userId = Object.keys(response?.user_id_to_credit_usage || {})[0];
+  const limit = response?.user_id_to_credit_usage?.[userId]?.email?.limit;
 
-    console.log('📄 Updating Google Sheet...');
-    const jwtClient = new google.auth.JWT(
-      serviceAccount.client_email,
-      null,
-      serviceAccount.private_key,
-      ['https://www.googleapis.com/auth/spreadsheets']
-    );
-
-    await jwtClient.authorize();
-    const sheets = google.sheets({ version: 'v4', auth: jwtClient });
-
-    await sheets.spreadsheets.values.update({
-      spreadsheetId: sheetId,
-      range: 'Sheet1!A1:B1',
-      valueInputOption: 'RAW',
-      requestBody: {
-        values: [[totalUsed, totalLimit]],
-      },
-    });
-
-    console.log('✅ Sheet updated successfully.');
-  } catch (err) {
-    console.error('❌ Error:', err.message);
-    await page.screenshot({ path: 'error_general.png' });
-  } finally {
-    await browser.close();
+  if (!team || !limit) {
+    console.error("❌ Could not extract usage or limit");
+    console.error(JSON.stringify(response, null, 2));
+    process.exit(1);
   }
-})();
+
+  const used = team.email + team.direct_dial + team.export + team.ai;
+  console.log(`✅ Total used: ${used}`);
+  console.log(`🎯 Limit: ${limit}`);
+
+  console.log("📤 Updating Google Sheet...");
+  const doc = new GoogleSpreadsheet(SHEET_ID);
+  await doc.useServiceAccountAuth(SERVICE_ACCOUNT);
+  await doc.loadInfo();
+  const sheet = doc.sheetsByTitle["Sheet1"] || doc.sheetsByIndex[0];
+
+  await sheet.loadCells('A1:B1');
+  sheet.getCell(0, 0).value = used;
+  sheet.getCell(0, 1).value = limit;
+  await sheet.saveUpdatedCells();
+
+  console.log("✅ Google Sheet updated!");
+}
+
+main().catch(err => {
+  console.error("❌ Error:", err.message);
+  process.exit(1);
+});
