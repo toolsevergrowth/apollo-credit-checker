@@ -5,15 +5,14 @@ import path from 'path';
 const screenshotPath = 'apollo-login-check.png';
 
 (async () => {
-  console.log("🔐 Launching browser with saved session...");
+  console.log("🔐 Launching browser with saved profile folder...");
 
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({
-    storageState: 'storageState.json',
+  const browser = await chromium.launchPersistentContext('./apollo-session', {
+    headless: true,
     viewport: { width: 1280, height: 800 }
   });
 
-  const page = await context.newPage();
+  const page = await browser.newPage();
 
   console.log("🌐 Navigating to Apollo...");
   await page.goto('https://app.apollo.io', { waitUntil: 'domcontentloaded' });
