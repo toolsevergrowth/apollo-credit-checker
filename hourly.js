@@ -15,9 +15,12 @@ const storagePath = './storageState.json';
   const page = await context.newPage();
 
   console.log("🌐 Navigating to Apollo...");
-  await page.goto('https://app.apollo.io');
+  await page.goto('https://app.apollo.io', { waitUntil: 'domcontentloaded' });
 
-  // ✅ Example action: check if still logged in
+  // Take screenshot for debugging
+  await page.screenshot({ path: 'apollo-login-check.png', fullPage: true });
+  console.log("📸 Screenshot saved to apollo-login-check.png");
+
   const isLoggedIn = await page.locator('text=Log Out').first().isVisible().catch(() => false);
   console.log(isLoggedIn ? "✅ Session is valid!" : "❌ Not logged in.");
 
