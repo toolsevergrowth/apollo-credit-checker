@@ -1,42 +1,109 @@
-import { chromium } from 'playwright';
+const fs = require('fs');
+const { google } = require('googleapis');
+const { chromium: baseChromium } = require('playwright-extra');
+const stealth = require('puppeteer-extra-plugin-stealth')();
+
+baseChromium.use(stealth);
+
+console.log("🔐 Launching browser with stealth...");
 
 const email = process.env.APOLLO_EMAIL;
 const password = process.env.APOLLO_PASSWORD;
-const screenshot = 'apollo-login-success.png';
+const sheetId = process.env.GOOGLE_SHEET_ID;
+const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
-  const page = await context.newPage();
+  const browser = await baseChromium.launchPersistentContext('/tmp/apollo-user', {
+    headless: true,
+    viewport: { width: 1280, height: 800 },
+    locale: 'en-US',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+  });
 
-  console.log("🌐 Navigating to Apollo login...");
-  await page.goto('https://app.apollo.io/#/login', { waitUntil: 'domcontentloaded' });
+  const page = await browser.newPage();
 
-  console.log("⌛ Waiting for email input...");
   try {
-    await page.waitForSelector('input[type="email"]', { timeout: 20000 });
-    await page.fill('input[type="email"]', email);
-    await page.click('button:has-text("Next")');
+    console.log("🔐 Navigating to Apollo login...");
+    await page.goto('https://app.apollo.io/#/login', { waitUntil: 'networkidle' });
 
-    await page.waitForSelector('input[type="password"]', { timeout: 15000 });
-    await page.fill('input[type="password"]', password);
-    await page.click('button:has-text("Log In")');
+    console.log("⌨️ Waiting for email input...");
+    await page.waitForSelector('input[placeholder="Work Email"]', { timeout: 40000 });
 
-    console.log("⏳ Waiting for dashboard...");
-    await page.waitForTimeout(10000);
+    console.log("⌨️ Typing email...");
+    await page.fill('input[placeholder="Work Email"]', email);
+
+    console.log("⌨️ Typing password...");
+    await page.fill('input[placeholder="Enter your password"]', password);
+
+    console.log("🔐 Submitting login form (not Google)...");
+    await page.locator('input[placeholder="Enter your password"]').evaluate((el) => {
+      el.form.querySelector('button[type="submit"]').click();
+    });
+
+    console.log("⏳ Waiting for post-login redirect...");
+    await page.waitForTimeout(15000);
+
+    const url = page.url();
+    if (url.includes('google.com') || url.includes('cloudflare')) {
+      throw new Error("Blocked by CAPTCHA or redirected to Google login.");
+    }
+
+    console.log("📤 Fetching credit usage...");
+    const res = await page.request.post('https://app.apollo.io/api/v1/credit_usages/credit_usage_by_user', {
+      data: {
+        min_date: '2025-03-27T11:58:44.000+00:00',
+        max_date: '2025-04-27T11:58:45.000+00:00',
+        for_current_billing_cycle: true,
+        user_ids: [],
+        cacheKey: Date.now()
+      }
+    });
+
+    const body = await res.text();
+    let json;
+    try {
+      json = JSON.parse(body);
+    } catch (e) {
+      throw new Error(`Invalid JSON response from Apollo:\n${body}`);
+    }
+
+    const used = json.team_credit_usage?.email ?? 0;
+    const limit = json.user_id_to_credit_usage
+      ? Object.values(json.user_id_to_credit_usage)[0].email.limit
+      : 0;
+
+    console.log(`📈 Used: ${used}, Limit: ${limit}`);
+
+    console.log("📄 Connecting to Google Sheets...");
+    const auth = new google.auth.JWT({
+      email: serviceAccount.client_email,
+      key: serviceAccount.private_key,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets']
+    });
+
+    const sheets = google.sheets({ version: 'v4', auth });
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: sheetId,
+      range: 'Sheet1!A1:B1',
+      valueInputOption: 'RAW',
+      requestBody: {
+        values: [[used, limit]]
+      }
+    });
+
+    console.log("✅ Sheet updated.");
   } catch (err) {
-    console.error("❌ Error during login:", err.message);
-    await page.screenshot({ path: 'apollo-login-failure.png', fullPage: true });
-    console.log("📸 Screenshot saved to apollo-login-failure.png");
+    console.error("❌ Error:", err.message);
+
+    try {
+      const screenshotPath = 'error-screenshot.png';
+      await page.screenshot({ path: screenshotPath, fullPage: true });
+      console.log("📸 Screenshot saved to:", screenshotPath);
+    } catch (screenshotError) {
+      console.error("⚠️ Screenshot capture failed:", screenshotError.message);
+    }
+  } finally {
     await browser.close();
-    process.exit(1);
   }
-
-  await page.screenshot({ path: screenshot });
-  console.log(`📸 Screenshot saved to ${screenshot}`);
-
-  const loggedIn = await page.$('text=My Account') || await page.$('[data-testid="navigation-bar"]');
-  console.log(loggedIn ? "✅ Login successful!" : "❌ Login may have failed.");
-
-  await browser.close();
 })();
