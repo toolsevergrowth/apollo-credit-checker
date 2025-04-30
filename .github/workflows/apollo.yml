@@ -16,10 +16,16 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install
 
+      - name: 🔐 Restore storageState.json from secret
+        run: echo "$APOLLO_STORAGE_BASE64" | base64 -d > storageState.json
+        shell: bash
+        env:
+          APOLLO_STORAGE_BASE64: ${{ secrets.APOLLO_STORAGE_BASE64 }}
+
       - name: 🧪 Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: 🚀 Run Playwright Apollo script
+      - name: 🚀 Run Apollo script
         run: node hourly.js
 
       - name: 📤 Upload debug artifacts
