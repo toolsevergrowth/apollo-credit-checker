@@ -1,42 +1,40 @@
-name: Apollo Credit Tracker
+name: Hourly Apollo Credit Check
 
 on:
   schedule:
     - cron: "0 * * * *"  # Runs every hour
-  workflow_dispatch:
+  workflow_dispatch:      # Enables manual Run button
 
 jobs:
-  run:
+  run-apollo-check:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout repo
+      uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
 
-      - name: Install dependencies
-        run: npm install
+    - name: Install dependencies
+      run: npm install
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps
 
-      - name: Restore Apollo session state
-        run: echo "$APOLLO_STORAGE_B64" | base64 -d > storageState.json
-        env:
-          APOLLO_STORAGE_B64: ${{ secrets.APOLLO_STORAGE_B64 }}
+    - name: Restore session
+      run: echo "$APOLLO_STORAGE_B64" | base64 -d > storageState.json
+      env:
+        APOLLO_STORAGE_B64: ${{ secrets.APOLLO_STORAGE_B64 }}
 
-      - name: Run Apollo session script
-        run: node hourly.js
+    - name: Run Apollo session check
+      run: node hourly.js
 
-
-      - name: Upload screenshot
+    - name: Upload screenshot
       if: always()
       uses: actions/upload-artifact@v3
       with:
         name: apollo-login-screenshot
         path: apollo-login-check.png
-
