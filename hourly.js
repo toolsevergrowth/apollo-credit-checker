@@ -1,29 +1,14 @@
 const fs = require('fs');
-const path = require('path');
-const os = require('os');
 const { google } = require('googleapis');
 const { chromium } = require('playwright');
-
-console.log("🔐 Launching browser using existing session...");
 
 const sheetId = process.env.GOOGLE_SHEET_ID;
 const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
 (async () => {
-  const profilePath = path.resolve(os.homedir(), '.config', 'apollo-session');
-  if (!fs.existsSync(profilePath)) {
-    throw new Error(`❌ Profile path not found: ${profilePath}`);
-  }
-
-  const browser = await chromium.launchPersistentContext(profilePath, {
-    headless: true,
-    viewport: { width: 1280, height: 800 },
-    locale: 'en-US',
-    userAgent:
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-  });
-
-  const page = await browser.newPage();
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ storageState: './storageState.json' });
+  const page = await context.newPage();
 
   try {
     console.log("📤 Fetching credit usage...");
@@ -75,25 +60,12 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
     console.error("❌ Error:", err.message);
 
     try {
-      const screenshotPath = 'error-screenshot.png';
-      const htmlPath = 'page-content.html';
-
-      const url = page?.url?.() ?? 'unknown';
-      console.log("🌐 Current page URL:", url);
-
-      if (page) {
-        const content = await page.content();
-        fs.writeFileSync(htmlPath, content);
-        console.log(`📝 Saved page HTML to ${htmlPath}`);
-
-        await page.screenshot({ path: screenshotPath, fullPage: true });
-        console.log("📸 Screenshot saved to:", screenshotPath);
-        console.log("📁 You can download it from GitHub Actions > Artifacts.");
-      } else {
-        console.warn("⚠️ No page object available for diagnostics.");
-      }
-    } catch (screenshotError) {
-      console.error("⚠️ Screenshot/HTML capture failed:", screenshotError.message);
+      await page.screenshot({ path: 'error-screenshot.png', fullPage: true });
+      const html = await page.content();
+      fs.writeFileSync('page-content.html', html);
+      console.log("📸 Screenshot and HTML saved.");
+    } catch (captureErr) {
+      console.error("⚠️ Could not capture screenshot or HTML:", captureErr.message);
     }
   } finally {
     await browser.close();
