@@ -1,42 +1,34 @@
-name: Apollo Credit Tracker
+name: Apollo Automated Login
 
 on:
-  schedule:
-    - cron: "0 * * * *"  # every hour
   workflow_dispatch:
 
 jobs:
-  run:
+  login:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@master
+      - name: Checkout
+        uses: actions/checkout@v3
 
       - name: Set up Node.js
-        uses: actions/setup-node@master
+        uses: actions/setup-node@v3
         with:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
-
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
-
-      - name: Decrypt apollo-session.enc
         run: |
-          openssl aes-256-cbc -d -in apollo-session.enc -out apollo-session.tar.gz -k "$APOLLO_DECRYPT_KEY"
-          tar -xzf apollo-session.tar.gz
-        env:
-          APOLLO_DECRYPT_KEY: ${{ secrets.APOLLO_DECRYPT_KEY }}
+          npm install
+          npx playwright install --with-deps
 
-      - name: Run script
+      - name: Run login script
         run: node hourly.js
+        env:
+          APOLLO_EMAIL: ${{ secrets.APOLLO_EMAIL }}
+          APOLLO_PASSWORD: ${{ secrets.APOLLO_PASSWORD }}
 
       - name: Upload screenshot
-        if: always()
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v3
         with:
           name: apollo-login-screenshot
-          path: apollo-login-check.png
+          path: apollo-login-success.png
