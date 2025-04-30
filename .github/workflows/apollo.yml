@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: 🛎️ Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@master
 
       - name: 📦 Install dependencies
         run: npm install
@@ -24,7 +24,7 @@ jobs:
 
       - name: 📤 Upload debug artifacts
         if: always()
-        uses: actions/upload-artifact@c97c1be26709c3c1c1f2efae8417633a2cfb8b2d
+        uses: actions/upload-artifact@master
         with:
           name: apollo-debug
           path: debug-artifacts
