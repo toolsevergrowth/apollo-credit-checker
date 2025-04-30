@@ -42,16 +42,7 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
     try {
       await page.waitForSelector('input[placeholder="Enter code"]', { timeout: 10000 });
 
-      console.log("🔁 Clicking 'Resend code'...");
-      const resendVisible = await page.isVisible('text=Resend code');
-      if (resendVisible) {
-        await page.click('text=Resend code');
-      } else {
-        console.warn("⚠️ Resend button not visible.");
-      }
-
-      console.log("📥 Waiting up to 60s for 2FA code from Google Sheet A1...");
-
+      console.log("⏳ Waiting up to 60s for 2FA code from Google Sheet A1...");
       const auth = new google.auth.JWT({
         email: serviceAccount.client_email,
         key: serviceAccount.private_key,
@@ -60,8 +51,9 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
       const sheets = google.sheets({ version: 'v4', auth });
 
       let code = '';
-      const maxAttempts = 4; // 4 tries every 15s = 60s
-      for (let i = 0; i < maxAttempts; i++) {
+      let attempt = 0;
+
+      while (!code && attempt < 4) {
         const res = await sheets.spreadsheets.values.get({
           spreadsheetId: sheetId,
           range: 'Sheet1!A1'
@@ -74,8 +66,19 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
           break;
         }
 
-        console.log("⏳ No code yet, retrying in 15 seconds...");
+        if (attempt === 1) {
+          console.log("🔁 No code after 30s — clicking 'Resend code' again...");
+          const resendVisible = await page.isVisible('text=Resend code');
+          if (resendVisible) {
+            await page.click('text=Resend code');
+          } else {
+            console.warn("⚠️ Resend button not visible.");
+          }
+        }
+
+        console.log("⏳ Retrying in 15 seconds...");
         await new Promise(r => setTimeout(r, 15000));
+        attempt++;
       }
 
       if (!code) {
