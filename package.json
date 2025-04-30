@@ -1,10 +1,11 @@
 {
-  "name": "apollo-github-actions",
+  "name": "apollo-credit-tracking",
   "version": "1.0.0",
   "scripts": {
-    "start": "node hourly.js"
+    "start": "node daily.js"
   },
   "dependencies": {
-    "playwright": "^1.43.1"
+    "playwright": "^1.43.1",
+    "googleapis": "^133.0.0"
   }
 }
