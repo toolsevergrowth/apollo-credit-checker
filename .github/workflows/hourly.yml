@@ -43,5 +43,6 @@ jobs:
         with:
           name: error-screenshot
           path: error-screenshot.png
-      - name: Unzip session
-        run: unzip apollo-session.zip -d ~/.config/
+      - name: Extract apollo session profile
+        run: mkdir -p ~/.config/apollo-session && tar -xzf apollo-session.tar.gz -C ~/.config/apollo-session --strip-components=1
+
