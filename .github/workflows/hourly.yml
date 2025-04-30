@@ -43,3 +43,5 @@ jobs:
         with:
           name: error-screenshot
           path: error-screenshot.png
+      - name: Unzip session
+        run: unzip apollo-session.zip -d ~/.config/
