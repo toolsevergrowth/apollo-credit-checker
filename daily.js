@@ -82,7 +82,7 @@ async function pushToGoogleSheet({ used, limit }) {
 
   await sheets.spreadsheets.values.update({
     spreadsheetId,
-    range: `Sheet1!A${rowNum}:B${rowNum}`,
+    range: `Apollo!A${rowNum}:B${rowNum}`,
     valueInputOption: 'USER_ENTERED',
     requestBody: {
       values: [[timestamp, creditsLeft]],
