@@ -1,8 +1,8 @@
-name: Hourly Credit Sync
+name: Apollo Credit Tracker
 
 on:
   schedule:
-    - cron: "0 * * * *"  # every hour
+    - cron: "0 * * * *" # Every hour
   workflow_dispatch:
 
 jobs:
@@ -10,28 +10,22 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout
+      uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
 
-      - name: Install dependencies
-        run: npm install
+    - name: Install dependencies
+      run: npm install
 
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps
+    - name: Restore session
+      run: |
+        echo "$APOLLO_STORAGE_B64" | base64 -d > storageState.json
+      env:
+        APOLLO_STORAGE_B64: ${{ secrets.APOLLO_STORAGE_B64 }}
 
-      - name: Decode apollo-cookies.json from secret
-        run: |
-          echo "$APOLLO_COOKIES_BASE64" | base64 --decode > apollo-cookies.json
-        env:
-          APOLLO_COOKIES_BASE64: ${{ secrets.APOLLO_COOKIES_BASE64 }}
-
-      - name: Run Apollo Credit Tracker
-        env:
-          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
-          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
-        run: node hourly.js
+    - name: Run Apollo session check
+      run: node hourly.js
