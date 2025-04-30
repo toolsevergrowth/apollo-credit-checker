@@ -21,7 +21,10 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install
 
-      - name: 📂 Create session directory and extract tarball
+      - name: 📥 Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: 📂 Extract Apollo session
         run: |
           mkdir -p ~/.config/apollo-session
           tar -xzf apollo-session.tar.gz -C ~/.config/apollo-session --strip-components=1
