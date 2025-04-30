@@ -40,9 +40,10 @@ const path = require('path');
     const result = { used, limit, timestamp: new Date().toISOString() };
     fs.writeFileSync(path.join(screenshotDir, 'result.json'), JSON.stringify(result, null, 2));
 
-    await page.goto('https://app.apollo.io/#/home', { timeout: 30000 }).catch(() => {});
+    // 👇 Go to Apollo credit settings page
+    await page.goto('https://app.apollo.io/#/settings/credits/current', { timeout: 30000 });
     await page.waitForTimeout(5000);
-    await page.screenshot({ path: path.join(screenshotDir, 'apollo-dashboard.png'), fullPage: true });
+    await page.screenshot({ path: path.join(screenshotDir, 'apollo-credits-page.png'), fullPage: true });
 
     console.log("✅ Data and screenshot saved.");
   } catch (err) {
