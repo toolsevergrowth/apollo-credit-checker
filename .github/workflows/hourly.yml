@@ -35,9 +35,11 @@ jobs:
           GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
         run: node hourly.js
 
-      - name: 📸 Upload error screenshot
-        if: always()  # <-- this uploads even on successful run if file exists
+      - name: 📸 Upload diagnostic artifacts (screenshot + HTML)
+        if: always()
         uses: actions/upload-artifact@master
         with:
-          name: apollo-error-screenshot
-          path: error-screenshot.png
+          name: apollo-debug-artifacts
+          path: |
+            error-screenshot.png
+            page-content.html
