@@ -1,28 +1,39 @@
 import { chromium } from 'playwright';
-import fs from 'fs';
 
-const storagePath = './storageState.json';
+const fs = require('fs');
+const path = require('path');
 
 (async () => {
-  if (!fs.existsSync(storagePath)) {
-    console.error("❌ storageState.json missing!");
-    process.exit(1);
-  }
-
   console.log("🔐 Launching browser with saved session...");
-  const browser = await chromium.launch({ headless: true });
-  const context = await browser.newContext({ storageState: storagePath });
-  const page = await context.newPage();
+
+  const browser = await chromium.launchPersistentContext('', {
+    headless: true,
+    viewport: { width: 1280, height: 800 },
+    storageState: 'storageState.json',
+  });
+
+  const page = await browser.newPage();
 
   console.log("🌐 Navigating to Apollo...");
-  await page.goto('https://app.apollo.io', { waitUntil: 'domcontentloaded' });
+  await page.goto('https://app.apollo.io/', { waitUntil: 'domcontentloaded' });
 
-  // Take screenshot for debugging
-  await page.screenshot({ path: 'apollo-login-check.png', fullPage: true });
-  console.log("📸 Screenshot saved to apollo-login-check.png");
+  // 🔄 Wait for Apollo app to finish loading (spinner disappears)
+  await page.waitForTimeout(10000); // You can adjust this if needed
 
-  const isLoggedIn = await page.locator('text=Log Out').first().isVisible().catch(() => false);
-  console.log(isLoggedIn ? "✅ Session is valid!" : "❌ Not logged in.");
+  // 📸 Save screenshot for debugging
+  const screenshotPath = 'apollo-login-check.png';
+  await page.screenshot({ path: screenshotPath, fullPage: true });
+  console.log(`📸 Screenshot saved to ${screenshotPath}`);
+
+  // ✅ Login check — adjust selector as needed
+  const loggedIn = await page.$('text=My Account') || await page.$('[data-testid="navigation-bar"]');
+
+  if (loggedIn) {
+    console.log("✅ Logged in successfully!");
+    // Proceed with your automation here...
+  } else {
+    console.log("❌ Not logged in.");
+  }
 
   await browser.close();
 })();
