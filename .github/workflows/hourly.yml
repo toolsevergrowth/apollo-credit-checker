@@ -35,8 +35,8 @@ jobs:
         shell: bash
         run: |
           mkdir -p debug-artifacts
-          [ -f error-screenshot.png ] && cp error-screenshot.png debug-artifacts/
-          [ -f page-content.html ] && cp page-content.html debug-artifacts/
+          [ -f error-screenshot.png ] && cp error-screenshot.png debug-artifacts/ || true
+          [ -f page-content.html ] && cp page-content.html debug-artifacts/ || true
 
       - name: 📤 Upload debug artifacts (only if created)
         if: always()
