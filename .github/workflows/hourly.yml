@@ -31,3 +31,12 @@ jobs:
 
       - name: Run Apollo session script
         run: node hourly.js
+
+
+      - name: Upload screenshot
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: apollo-login-screenshot
+        path: apollo-login-check.png
+
