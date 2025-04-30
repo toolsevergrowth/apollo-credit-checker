@@ -2,7 +2,7 @@ name: Apollo Credit Tracker
 
 on:
   schedule:
-    - cron: "0 * * * *" # Every hour
+    - cron: "0 * * * *"  # Runs every hour
   workflow_dispatch:
 
 jobs:
@@ -10,22 +10,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
-    - name: Install dependencies
-      run: npm install
+      - name: Install dependencies
+        run: npm install
 
-    - name: Restore session
-      run: |
-        echo "$APOLLO_STORAGE_B64" | base64 -d > storageState.json
-      env:
-        APOLLO_STORAGE_B64: ${{ secrets.APOLLO_STORAGE_B64 }}
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
 
-    - name: Run Apollo session check
-      run: node hourly.js
+      - name: Restore Apollo session state
+        run: echo "$APOLLO_STORAGE_B64" | base64 -d > storageState.json
+        env:
+          APOLLO_STORAGE_B64: ${{ secrets.APOLLO_STORAGE_B64 }}
+
+      - name: Run Apollo session script
+        run: node hourly.js
