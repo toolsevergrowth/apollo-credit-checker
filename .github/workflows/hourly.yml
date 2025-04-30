@@ -11,10 +11,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@master
+        uses: actions/checkout@v3
 
       - name: Set up Node.js
-        uses: actions/setup-node@master
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
@@ -24,17 +24,19 @@ jobs:
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      - name: Decode session
-        run: echo "$APOLLO_STORAGE_B64" | base64 -d > storageState.json
+      - name: Decrypt apollo-session.enc
+        run: |
+          openssl aes-256-cbc -d -in apollo-session.enc -out apollo-session.tar.gz -k "$APOLLO_DECRYPT_KEY"
+          tar -xzf apollo-session.tar.gz
         env:
-          APOLLO_STORAGE_B64: ${{ secrets.APOLLO_STORAGE_B64 }}
+          APOLLO_DECRYPT_KEY: ${{ secrets.APOLLO_DECRYPT_KEY }}
 
       - name: Run script
         run: node hourly.js
 
       - name: Upload screenshot
         if: always()
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v3
         with:
           name: apollo-login-screenshot
           path: apollo-login-check.png
