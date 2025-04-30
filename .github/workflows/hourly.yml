@@ -34,8 +34,9 @@ jobs:
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
         run: node hourly.js
+
       - name: 📸 Upload error screenshot
-        if: failure()
+        if: always()  # <-- this uploads even on successful run if file exists
         uses: actions/upload-artifact@master
         with:
           name: apollo-error-screenshot
