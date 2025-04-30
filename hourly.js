@@ -10,7 +10,6 @@ const sheetId = process.env.GOOGLE_SHEET_ID;
 const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
 (async () => {
-  // Use the extracted session profile
   const profilePath = path.resolve(os.homedir(), '.config', 'apollo-session');
   if (!fs.existsSync(profilePath)) {
     throw new Error(`❌ Profile path not found: ${profilePath}`);
@@ -77,15 +76,24 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
     try {
       const screenshotPath = 'error-screenshot.png';
+      const htmlPath = 'page-content.html';
+
+      const url = page?.url?.() ?? 'unknown';
+      console.log("🌐 Current page URL:", url);
+
       if (page) {
+        const content = await page.content();
+        fs.writeFileSync(htmlPath, content);
+        console.log(`📝 Saved page HTML to ${htmlPath}`);
+
         await page.screenshot({ path: screenshotPath, fullPage: true });
         console.log("📸 Screenshot saved to:", screenshotPath);
-        console.log("📁 It will appear under 'Artifacts' in GitHub Actions.");
+        console.log("📁 You can download it from GitHub Actions > Artifacts.");
       } else {
-        console.warn("⚠️ No page available to capture screenshot.");
+        console.warn("⚠️ No page object available for diagnostics.");
       }
     } catch (screenshotError) {
-      console.error("⚠️ Screenshot capture failed:", screenshotError.message);
+      console.error("⚠️ Screenshot/HTML capture failed:", screenshotError.message);
     }
   } finally {
     await browser.close();
