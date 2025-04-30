@@ -2,7 +2,7 @@ name: Apollo Credit Usage (Hourly)
 
 on:
   schedule:
-    - cron: "0 * * * *"  # every hour
+    - cron: "0 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -24,22 +24,17 @@ jobs:
       - name: 📥 Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      - name: 📂 Extract Apollo session
-        run: |
-          mkdir -p ~/.config/apollo-session
-          tar -xf apollo-session.tar -C ~/.config/apollo-session --strip-components=1
-
       - name: 📊 Run hourly Apollo credit usage script
         env:
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
         run: node hourly.js
 
-      - name: 📸 Upload diagnostic artifacts (screenshot + HTML)
+      - name: 📸 Upload debug artifacts
         if: always()
         uses: actions/upload-artifact@master
         with:
-          name: apollo-debug-artifacts
+          name: apollo-debug
           path: |
             error-screenshot.png
             page-content.html
