@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { google } = require('googleapis');
-const { chromium } = require('playwright'); // base Playwright
+const { chromium } = require('playwright');
 
 console.log("🔐 Launching browser using existing session...");
 
@@ -17,10 +17,11 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
   }
 
   const browser = await chromium.launchPersistentContext(profilePath, {
-    headless: true, // run headful at least once to pass Cloudflare
+    headless: true,
     viewport: { width: 1280, height: 800 },
     locale: 'en-US',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
+    userAgent:
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
   });
 
   const page = await browser.newPage();
@@ -76,8 +77,13 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
     try {
       const screenshotPath = 'error-screenshot.png';
-      await page.screenshot({ path: screenshotPath, fullPage: true });
-      console.log("📸 Screenshot saved to:", screenshotPath);
+      if (page) {
+        await page.screenshot({ path: screenshotPath, fullPage: true });
+        console.log("📸 Screenshot saved to:", screenshotPath);
+        console.log("📁 It will appear under 'Artifacts' in GitHub Actions.");
+      } else {
+        console.warn("⚠️ No page available to capture screenshot.");
+      }
     } catch (screenshotError) {
       console.error("⚠️ Screenshot capture failed:", screenshotError.message);
     }
