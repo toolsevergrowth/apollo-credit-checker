@@ -34,3 +34,9 @@ jobs:
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
         run: node hourly.js
+      - name: 📸 Upload error screenshot
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: apollo-error-screenshot
+          path: error-screenshot.png
