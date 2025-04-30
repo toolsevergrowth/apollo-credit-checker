@@ -1,37 +1,45 @@
-name: Apollo Automated Login
+name: Hourly Credit Sync
 
 on:
   schedule:
-    - cron: "0 * * * *"  # Every hour
+    - cron: "0 * * * *" # Every hour
   workflow_dispatch:
 
 jobs:
-  login:
+  run:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@master
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
       - name: Set up Node.js
-        uses: actions/setup-node@master
+        uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: '20'
 
       - name: Install dependencies
-        run: |
-          npm install
-          npx playwright install --with-deps
+        run: npm install
 
-      - name: Run login script
-        run: node hourly.js
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Apollo credit tracker
         env:
           APOLLO_EMAIL: ${{ secrets.APOLLO_EMAIL }}
           APOLLO_PASSWORD: ${{ secrets.APOLLO_PASSWORD }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+        run: |
+          echo "🔍 Checking env vars..."
+          echo "GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID:+SET}"
+          echo "GOOGLE_SERVICE_ACCOUNT=${GOOGLE_SERVICE_ACCOUNT:+SET}"
+          node hourly.js
 
-      - name: Upload screenshot
+      - name: Upload screenshot on failure
         if: always()
-        uses: actions/upload-artifact@master
+        continue-on-error: true
+        uses: actions/upload-artifact@main
         with:
-          name: apollo-login-screenshot
-          path: apollo-login-success.png
+          name: error-screenshot
+          path: error-screenshot.png
