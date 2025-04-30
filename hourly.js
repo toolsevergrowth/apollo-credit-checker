@@ -12,23 +12,23 @@ const screenshot = 'apollo-login-success.png';
 
   const page = await context.newPage();
 
-  console.log("🌐 Navigating to login page...");
+  console.log("🌐 Navigating to Apollo login...");
   await page.goto('https://app.apollo.io/#/login', { waitUntil: 'networkidle' });
 
   console.log("⌨️ Typing credentials...");
   await page.fill('input[type="email"]', email);
-  await page.click('button:has-text("Next")');
-  await page.waitForSelector('input[type="password"]', { timeout: 10000 });
-  await page.fill('input[type="password"]', password);
-  await page.click('button:has-text("Log In")');
+  await page.click('button:has-text(\"Next\")');
+  await page.waitForSelector('input[type=\"password\"]', { timeout: 10000 });
+  await page.fill('input[type=\"password\"]', password);
+  await page.click('button:has-text(\"Log In\")');
 
   console.log("⏳ Waiting for dashboard...");
-  await page.waitForTimeout(10000); // increase if needed
+  await page.waitForTimeout(10000);
 
   await page.screenshot({ path: screenshot });
   console.log(`📸 Screenshot saved to ${screenshot}`);
 
-  const loggedIn = await page.$('text=My Account') || await page.$('[data-testid="navigation-bar"]');
+  const loggedIn = await page.$('text=My Account') || await page.$('[data-testid=\"navigation-bar\"]');
   console.log(loggedIn ? "✅ Login successful!" : "❌ Login may have failed.");
 
   await browser.close();
