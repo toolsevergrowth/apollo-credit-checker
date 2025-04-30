@@ -24,7 +24,7 @@ jobs:
 
       - name: 📤 Upload debug artifacts
         if: always()
-        uses: actions/upload-artifact@v3.1.3
+        uses: actions/upload-artifact@c97c1be26709c3c1c1f2efae8417633a2cfb8b2d
         with:
           name: apollo-debug
           path: debug-artifacts
