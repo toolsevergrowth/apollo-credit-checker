@@ -27,7 +27,7 @@ jobs:
       - name: 📂 Extract Apollo session
         run: |
           mkdir -p ~/.config/apollo-session
-          tar -xzf apollo-session.tar.gz -C ~/.config/apollo-session --strip-components=1
+          tar -xzf apollo-session.tar -C ~/.config/apollo-session --strip-components=1
 
       - name: 📊 Run hourly Apollo credit usage script
         env:
