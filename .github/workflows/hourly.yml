@@ -2,7 +2,7 @@ name: Hourly Credit Sync
 
 on:
   schedule:
-    - cron: "0 * * * *" # Every hour
+    - cron: "0 * * * *"  # every hour
   workflow_dispatch:
 
 jobs:
@@ -21,25 +21,17 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Install Playwright Browsers
+      - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: Run Apollo credit tracker
+      - name: Decode apollo-cookies.json from secret
+        run: |
+          echo "$APOLLO_COOKIES_BASE64" | base64 --decode > apollo-cookies.json
         env:
-          APOLLO_EMAIL: ${{ secrets.APOLLO_EMAIL }}
-          APOLLO_PASSWORD: ${{ secrets.APOLLO_PASSWORD }}
+          APOLLO_COOKIES_BASE64: ${{ secrets.APOLLO_COOKIES_BASE64 }}
+
+      - name: Run Apollo Credit Tracker
+        env:
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
-        run: |
-          echo "🔍 Checking env vars..."
-          echo "GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID:+SET}"
-          echo "GOOGLE_SERVICE_ACCOUNT=${GOOGLE_SERVICE_ACCOUNT:+SET}"
-          node hourly.js
-
-      - name: Upload screenshot on failure
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@main
-        with:
-          name: error-screenshot
-          path: error-screenshot.png
+        run: node hourly.js
