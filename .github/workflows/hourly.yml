@@ -31,7 +31,7 @@ jobs:
 
       - name: Upload screenshot
         if: always()
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@8b0319c7dfcf6ed3f3f8a90f8de50c26d17f1d59
         with:
           name: apollo-screenshot
           path: apollo-login-check.png
