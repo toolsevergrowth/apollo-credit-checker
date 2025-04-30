@@ -1,48 +1,33 @@
-name: Hourly Credit Sync
+name: Apollo Credit Usage (Hourly)
 
 on:
   schedule:
-    - cron: "0 * * * *" # Every hour
+    - cron: "0 * * * *"  # every hour
   workflow_dispatch:
 
 jobs:
-  run:
+  run-hourly:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: 🛎️ Checkout repo
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: 🧰 Setup Node
+        uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: 20
 
-      - name: Install dependencies
-        run: npm install
+      - name: 📦 Install dependencies
+        run: npm ci
 
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+      - name: 📂 Create session directory and extract tarball
+        run: |
+          mkdir -p ~/.config/apollo-session
+          tar -xzf apollo-session.tar.gz -C ~/.config/apollo-session --strip-components=1
 
-      - name: Run Apollo credit tracker
+      - name: 📊 Run hourly Apollo credit usage script
         env:
-          APOLLO_EMAIL: ${{ secrets.APOLLO_EMAIL }}
-          APOLLO_PASSWORD: ${{ secrets.APOLLO_PASSWORD }}
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
-        run: |
-          echo "🔍 Checking env vars..."
-          echo "GOOGLE_SHEET_ID=${GOOGLE_SHEET_ID:+SET}"
-          echo "GOOGLE_SERVICE_ACCOUNT=${GOOGLE_SERVICE_ACCOUNT:+SET}"
-          node hourly.js
-
-      - name: Upload screenshot on failure
-        if: always()
-        continue-on-error: true
-        uses: actions/upload-artifact@main
-        with:
-          name: error-screenshot
-          path: error-screenshot.png
-      - name: Extract apollo session profile
-        run: mkdir -p ~/.config/apollo-session && tar -xzf apollo-session.tar.gz -C ~/.config/apollo-session --strip-components=1
-
+        run: node hourly.js
