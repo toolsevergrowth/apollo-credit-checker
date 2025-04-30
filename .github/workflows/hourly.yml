@@ -2,7 +2,7 @@ name: Apollo Credit Tracker
 
 on:
   schedule:
-    - cron: "0 * * * *"  # Every hour
+    - cron: "0 * * * *"  # every hour
   workflow_dispatch:
 
 jobs:
@@ -11,27 +11,30 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@master  # fallback if v3/v2 fails
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@master
         with:
           node-version: 20
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Decode session storage state
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Decode session
+        run: echo "$APOLLO_STORAGE_B64" | base64 -d > storageState.json
         env:
           APOLLO_STORAGE_B64: ${{ secrets.APOLLO_STORAGE_B64 }}
-        run: echo "$APOLLO_STORAGE_B64" | base64 -d > storageState.json
 
-      - name: Run Apollo script
+      - name: Run script
         run: node hourly.js
 
       - name: Upload screenshot
         if: always()
-        uses: actions/upload-artifact@8b0319c7dfcf6ed3f3f8a90f8de50c26d17f1d59
+        uses: actions/upload-artifact@master
         with:
-          name: apollo-screenshot
+          name: apollo-login-screenshot
           path: apollo-login-check.png
