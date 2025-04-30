@@ -17,7 +17,7 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
   }
 
   const browser = await chromium.launchPersistentContext(profilePath, {
-    headless: false, // run headful at least once to pass Cloudflare
+    headless: true, // run headful at least once to pass Cloudflare
     viewport: { width: 1280, height: 800 },
     locale: 'en-US',
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
