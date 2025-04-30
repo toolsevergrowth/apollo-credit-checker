@@ -1,0 +1,25 @@
+name: Manual Apollo Login Capture
+
+on:
+  workflow_dispatch:
+
+jobs:
+  capture-session:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          npm install
+          npx playwright install --with-deps
+
+      - name: Run login capture script
+        run: node login-capture.js
