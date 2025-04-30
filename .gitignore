@@ -175,3 +175,6 @@ cython_debug/
 
 # Apollo login cookies (do not commit)
 apollo-cookies.json
+
+# Sensitive session data
+storageState.json
