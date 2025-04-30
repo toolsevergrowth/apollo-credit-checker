@@ -13,34 +13,18 @@ jobs:
       - name: 🛎️ Checkout repo
         uses: actions/checkout@v3
 
-      - name: 🧰 Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20
-
       - name: 📦 Install dependencies
         run: npm install
 
       - name: 📥 Install Playwright Browsers
         run: npx playwright install --with-deps
 
-      - name: 📊 Run hourly Apollo credit usage script
-        env:
-          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
-          GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
+      - name: 📊 Run Apollo script
         run: node hourly.js
 
-      - name: 📂 Prepare debug artifact directory
+      - name: 📤 Upload debug artifacts
         if: always()
-        shell: bash
-        run: |
-          mkdir -p debug-artifacts
-          [ -f error-screenshot.png ] && cp error-screenshot.png debug-artifacts/ || true
-          [ -f page-content.html ] && cp page-content.html debug-artifacts/ || true
-
-      - name: 📤 Upload debug artifacts (only if created)
-        if: always()
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v3
         with:
           name: apollo-debug
           path: debug-artifacts
