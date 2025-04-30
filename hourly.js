@@ -1,48 +1,31 @@
 const fs = require('fs');
 const { google } = require('googleapis');
-const { chromium: baseChromium } = require('playwright-extra');
+const { chromium } = require('playwright-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth')();
 
-baseChromium.use(StealthPlugin);
+chromium.use(StealthPlugin);
 
-const email = process.env.APOLLO_EMAIL;
-const password = process.env.APOLLO_PASSWORD;
 const sheetId = process.env.GOOGLE_SHEET_ID;
 const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
 
 (async () => {
-  const browser = await baseChromium.launchPersistentContext('/tmp/apollo-user', {
-    headless: true,
-    viewport: { width: 1280, height: 800 },
-    locale: 'en-US',
-    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
-  });
+  const browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext();
 
-  const page = await browser.newPage();
+  // Load cookies
+  const cookiesPath = './apollo-cookies.json';
+  if (!fs.existsSync(cookiesPath)) {
+    console.error("❌ Cookie file not found. Please create apollo-cookies.json locally.");
+    process.exit(1);
+  }
+
+  const cookies = JSON.parse(fs.readFileSync(cookiesPath, 'utf8'));
+  await context.addCookies(cookies);
+
+  const page = await context.newPage();
+  await page.goto('https://app.apollo.io/app', { waitUntil: 'networkidle' });
 
   try {
-    console.log("🌐 Navigating to Apollo login page...");
-    await page.goto('https://app.apollo.io/#/login', { waitUntil: 'networkidle' });
-
-    console.log("🔘 Clicking 'Log in with Google'...");
-    await page.waitForSelector('button:has-text("Log in with Google")', { timeout: 15000 });
-    await page.click('button:has-text("Log in with Google")');
-
-    console.log("📧 Typing Gmail email...");
-    await page.waitForSelector('input[type="email"]', { timeout: 15000 });
-    await page.fill('input[type="email"]', email);
-    await page.click('button:has-text("Next")');
-
-    console.log("🔑 Typing Gmail password...");
-    await page.waitForSelector('input[type="password"]', { timeout: 15000 });
-    await page.fill('input[type="password"]', password);
-    await page.click('button:has-text("Next")');
-
-    console.log("⏳ Waiting for Apollo to redirect...");
-    await page.waitForURL('**/app/**', { timeout: 30000 });
-
-    console.log("✅ Logged in via Google!");
-
     console.log("📤 Fetching credit usage...");
     const res = await page.request.post('https://app.apollo.io/api/v1/credit_usages/credit_usage_by_user', {
       data: {
@@ -90,7 +73,6 @@ const serviceAccount = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT);
     console.log("✅ Sheet updated.");
   } catch (err) {
     console.error("❌ Error:", err.message);
-
     try {
       const screenshotPath = 'error-screenshot.png';
       await page.screenshot({ path: screenshotPath, fullPage: true });
