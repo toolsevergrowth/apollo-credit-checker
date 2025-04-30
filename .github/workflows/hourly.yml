@@ -2,7 +2,7 @@ name: Apollo Credit Usage (Hourly)
 
 on:
   schedule:
-    - cron: "0 * * * *"
+    - cron: "0 * * * *"  # every hour
   workflow_dispatch:
 
 jobs:
@@ -30,11 +30,16 @@ jobs:
           GOOGLE_SERVICE_ACCOUNT: ${{ secrets.GOOGLE_SERVICE_ACCOUNT }}
         run: node hourly.js
 
-      - name: 📸 Upload debug artifacts
+      - name: 📂 Prepare debug artifact directory
+        if: always()
+        run: |
+          mkdir -p debug-artifacts
+          [ -f error-screenshot.png ] && cp error-screenshot.png debug-artifacts/
+          [ -f page-content.html ] && cp page-content.html debug-artifacts/
+
+      - name: 📤 Upload debug artifacts (only if created)
         if: always()
         uses: actions/upload-artifact@master
         with:
           name: apollo-debug
-          path: |
-            error-screenshot.png
-            page-content.html
+          path: debug-artifacts
