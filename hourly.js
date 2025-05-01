@@ -3,19 +3,22 @@ const fs = require('fs');
 const { google } = require('googleapis');
 
 (async () => {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ headless: true }); // change to false for local debug
   const context = await browser.newContext({ storageState: './storageState.json' });
   const page = await context.newPage();
 
   try {
     console.log("🌐 Opening Apollo Developer Usage page...");
     await page.goto('https://developer.apollo.io/usage/', { timeout: 30000 });
-    await page.waitForTimeout(5000);
 
-    const usageLocator = page.locator('text=/\\d+\\s*\\/\\s*\\d+/').first();
-    await usageLocator.waitFor({ timeout: 30000 });
+    await page.waitForTimeout(5000); // wait for JS to initialize
+    fs.mkdirSync('debug-artifacts', { recursive: true });
+    await page.screenshot({ path: 'debug-artifacts/dev-loaded.png', fullPage: true });
 
-    const usageText = await usageLocator.textContent();
+    // Wait for usage value to appear
+    await page.waitForSelector('text=/\\d+\\s*\\/\\s*\\d+/', { timeout: 30000 });
+    const usageText = await page.locator('text=/\\d+\\s*\\/\\s*\\d+/').first().textContent();
+
     const match = usageText?.match(/(\d+)\s*\/\s*(\d+)/);
     if (!match) throw new Error(`Could not extract usage values from: "${usageText}"`);
 
@@ -32,9 +35,9 @@ const { google } = require('googleapis');
     fs.writeFileSync('debug-artifacts/dev-usage-error.txt', err.stack || err.message);
     try {
       await page.screenshot({ path: 'debug-artifacts/dev-usage-error.png', fullPage: true });
-      console.log("🖼️ Saved screenshot to debug-artifacts/dev-usage-error.png");
+      console.log("🖼️ Saved error screenshot.");
     } catch (screenshotErr) {
-      console.error("⚠️ Could not capture screenshot:", screenshotErr.message);
+      console.error("⚠️ Could not capture error screenshot:", screenshotErr.message);
     }
   } finally {
     await browser.close();
