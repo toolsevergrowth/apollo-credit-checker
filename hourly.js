@@ -12,7 +12,10 @@ const { google } = require('googleapis');
     await page.goto('https://developer.apollo.io/usage/', { timeout: 30000 });
     await page.waitForTimeout(5000);
 
-    const usageText = await page.locator('text=/\\d+\\s*\\/\\s*\\d+/').first().textContent();
+    const usageLocator = page.locator('text=/\\d+\\s*\\/\\s*\\d+/').first();
+    await usageLocator.waitFor({ timeout: 30000 });
+
+    const usageText = await usageLocator.textContent();
     const match = usageText?.match(/(\d+)\s*\/\s*(\d+)/);
     if (!match) throw new Error(`Could not extract usage values from: "${usageText}"`);
 
@@ -27,6 +30,12 @@ const { google } = require('googleapis');
     console.error("❌ Error:", err.message);
     fs.mkdirSync('debug-artifacts', { recursive: true });
     fs.writeFileSync('debug-artifacts/dev-usage-error.txt', err.stack || err.message);
+    try {
+      await page.screenshot({ path: 'debug-artifacts/dev-usage-error.png', fullPage: true });
+      console.log("🖼️ Saved screenshot to debug-artifacts/dev-usage-error.png");
+    } catch (screenshotErr) {
+      console.error("⚠️ Could not capture screenshot:", screenshotErr.message);
+    }
   } finally {
     await browser.close();
   }
