@@ -1,0 +1,31 @@
+name: Apollo Google Login (Manual)
+
+on:
+  workflow_dispatch:  # Manual trigger only for debugging
+
+jobs:
+  run-login-debug:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛎️ Checkout repo
+        uses: actions/checkout@master  # match your existing workflow
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🧪 Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: 🚀 Run Apollo login.js with Google login flow
+        run: node login.js
+        env:
+          APOLLO_GOOGLE_EMAIL: ${{ secrets.APOLLO_GOOGLE_EMAIL }}
+          APOLLO_GOOGLE_PASSWORD: ${{ secrets.APOLLO_GOOGLE_PASSWORD }}
+
+      - name: 📤 Upload debug artifacts (screenshots, logs)
+        if: always()
+        uses: actions/upload-artifact@master
+        with:
+          name: apollo-login-debug
+          path: debug-artifacts
