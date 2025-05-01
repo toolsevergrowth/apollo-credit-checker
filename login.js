@@ -22,15 +22,21 @@ const path = require('path');
     console.log("🔐 Clicking Google login button...");
     await googleBtn.click();
 
-    console.log("📧 Waiting for email input...");
-    await page.waitForSelector('input[type="email"]', { timeout: 15000 });
-    await page.fill('input[type="email"]', process.env.APOLLO_GOOGLE_EMAIL);
-    await page.keyboard.press('Enter');
+   console.log("📧 Waiting for email input...");
+await page.waitForSelector('input[type="email"]', { timeout: 15000 });
+await page.fill('input[type="email"]', process.env.APOLLO_GOOGLE_EMAIL);
 
-    console.log("🔑 Waiting for password input...");
-    await page.waitForSelector('input[type="password"]', { timeout: 15000 });
-    await page.fill('input[type="password"]', process.env.APOLLO_GOOGLE_PASSWORD);
-    await page.keyboard.press('Enter');
+// click "Next"
+const nextBtn = page.locator('button:has-text("Next")');
+await nextBtn.waitFor({ timeout: 5000 });
+await nextBtn.click();
+await page.waitForTimeout(3000);
+
+// now wait for password input
+console.log("🔑 Waiting for password input...");
+await page.waitForSelector('input[type="password"]', { timeout: 15000 });
+await page.fill('input[type="password"]', process.env.APOLLO_GOOGLE_PASSWORD);
+await page.keyboard.press('Enter');
 
     console.log("⏳ Waiting after password entry...");
     await page.waitForTimeout(5000);
