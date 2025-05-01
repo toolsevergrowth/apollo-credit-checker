@@ -16,13 +16,17 @@ const { google } = require('googleapis');
     await page.waitForTimeout(5000);
     await page.screenshot({ path: `${artifactDir}/step-1-integrations.png`, fullPage: true });
 
-    // 🔍 Click the correct API card by text fallback
+    // 🔄 Scroll to load the API card
+    await page.mouse.wheel(0, 2000);
+    await page.waitForTimeout(1500);
+
+    // 🔍 Find and click the API card
     const cards = await page.locator('.zp_Y4xXE').all();
     let clicked = false;
 
     for (let i = 0; i < cards.length; i++) {
-      const cardText = await cards[i].textContent();
-      if (cardText?.includes("Programmatically access Apollo")) {
+      const text = await cards[i].textContent();
+      if (text?.includes("Programmatically access Apollo")) {
         await cards[i].click();
         clicked = true;
         break;
@@ -31,9 +35,9 @@ const { google } = require('googleapis');
 
     if (!clicked) throw new Error("❌ Could not find API card to click.");
     await page.waitForTimeout(3000);
-    await page.screenshot({ path: `${artifactDir}/step-2-api-card-clicked.png`, fullPage: true });
+    await page.screenshot({ path: `${artifactDir}/step-2-api-clicked.png`, fullPage: true });
 
-    // ✅ Click Usage tab
+    // 📊 Click Usage tab
     await page.getByText('Usage', { exact: true }).click();
     await page.waitForTimeout(3000);
 
@@ -46,7 +50,7 @@ const { google } = require('googleapis');
     const limit = parseInt(match[2], 10);
     const creditsLeft = limit - used;
 
-    console.log(`📊 Used: ${used} / ${limit} → Left: ${creditsLeft}`);
+    console.log(`📊 Used: ${used} of ${limit} → Left: ${creditsLeft}`);
     await page.screenshot({ path: `${artifactDir}/step-3-usage-confirmed.png`, fullPage: true });
 
     await pushToGoogleSheet({ creditsLeft });
@@ -57,7 +61,7 @@ const { google } = require('googleapis');
     try {
       await page.screenshot({ path: `${artifactDir}/error.png`, fullPage: true });
     } catch (screenshotErr) {
-      console.error("⚠️ Could not save error screenshot:", screenshotErr.message);
+      console.error("⚠️ Screenshot capture failed:", screenshotErr.message);
     }
   } finally {
     await browser.close();
