@@ -33,14 +33,31 @@ const path = require('path');
     await page.keyboard.press('Enter');
 
     console.log("⏳ Waiting after password entry...");
-    await page.waitForTimeout(10000);
+    await page.waitForTimeout(5000);
 
+    // Optional 2FA: Click "Try another way"
+    const tryAnother = page.locator('text=Try another way');
+    if (await tryAnother.isVisible({ timeout: 5000 })) {
+      console.log("🔁 Clicking 'Try another way'...");
+      await tryAnother.click();
+      await page.waitForTimeout(3000);
+
+      await page.screenshot({
+        path: path.join(screenshotDir, 'apollo-after-try-another-way.png'),
+        fullPage: true
+      });
+      console.log("📸 Screenshot saved after clicking 'Try another way'");
+    } else {
+      console.log("ℹ️ 'Try another way' not visible. Skipping.");
+    }
+
+    // Final screenshot after login flow attempt
     await page.screenshot({
       path: path.join(screenshotDir, 'apollo-after-login-attempt.png'),
       fullPage: true
     });
 
-    console.log("📸 Screenshot saved. Login process reached post-auth.");
+    console.log("✅ Done. Login attempt flow complete.");
   } catch (err) {
     console.error("❌ Error occurred:", err.message);
     try {
