@@ -15,33 +15,32 @@ const path = require('path');
     await page.goto('https://app.apollo.io/#/login', { timeout: 30000 });
     await page.waitForTimeout(3000);
 
-    console.log("🔐 Clicking 'Continue with Google'...");
-    const googleButton = page.locator('button:has-text("Continue with Google")');
-    await googleButton.first().click();
+    console.log("🔐 Waiting for Google login button...");
+    const googleBtn = page.locator('//button[contains(.,"Log In with Google")]');
+    await googleBtn.waitFor({ timeout: 15000 });
 
-    // Step 1: Wait for Google email input
+    console.log("🔐 Clicking Google login button...");
+    await googleBtn.click();
+
     console.log("📧 Waiting for email input...");
     await page.waitForSelector('input[type="email"]', { timeout: 15000 });
     await page.fill('input[type="email"]', process.env.APOLLO_GOOGLE_EMAIL);
     await page.keyboard.press('Enter');
 
-    // Step 2: Wait for Google password input
     console.log("🔑 Waiting for password input...");
     await page.waitForSelector('input[type="password"]', { timeout: 15000 });
     await page.fill('input[type="password"]', process.env.APOLLO_GOOGLE_PASSWORD);
     await page.keyboard.press('Enter');
 
-    // Optional: Wait longer to allow for 2FA or consent
-    console.log("⏳ Waiting for potential 2FA/consent screen...");
+    console.log("⏳ Waiting after password entry...");
     await page.waitForTimeout(10000);
 
-    // Screenshot current page state
     await page.screenshot({
       path: path.join(screenshotDir, 'apollo-after-login-attempt.png'),
       fullPage: true
     });
 
-    console.log("📸 Screenshot captured. Check artifacts to verify login flow.");
+    console.log("📸 Screenshot saved. Login process reached post-auth.");
   } catch (err) {
     console.error("❌ Error occurred:", err.message);
     try {
