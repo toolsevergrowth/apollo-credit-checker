@@ -2,7 +2,7 @@ name: Apollo Credit Usage (Daily)
 
 on:
   schedule:
-    - cron: "0 1 * * *"  # ⏰ 4:00 AM GMT+3 (Vilnius)
+    - cron: "0 23 * * *"  # ⏰ 2:00 AM Europe/Vilnius (GMT+3)
   workflow_dispatch:
 
 jobs:
