@@ -64,7 +64,7 @@ async function pushToGoogleSheet({ used, limit }) {
   const jwt = new google.auth.JWT(
     process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
     null,
-    process.env.GOOGLE_SERVICE_ACCOUNT_KEY.replace(/\\n/g, '\n'),
+    process.env.GOOGLE_SERVICE_ACCOUNT_KEY, // ✅ No .replace needed
     ['https://www.googleapis.com/auth/spreadsheets']
   );
 
@@ -75,7 +75,7 @@ async function pushToGoogleSheet({ used, limit }) {
 
   const readRes = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: 'Sheet1!B:B',
+    range: 'Apollo!B:B', // ✅ Updated to your actual sheet name
   });
 
   const rowNum = (readRes.data.values?.length || 0) + 1;
