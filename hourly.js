@@ -7,22 +7,36 @@ const { google } = require('googleapis');
   const context = await browser.newContext({ storageState: './storageState.json' });
   const page = await context.newPage();
 
+  const artifactDir = 'debug-artifacts';
+  fs.mkdirSync(artifactDir, { recursive: true });
+
   try {
-    console.log("🌐 Navigating directly to Apollo Integrations...");
+    console.log("🌐 Opening Apollo Integrations page...");
     await page.goto('https://app.apollo.io/#/settings/integrations', { timeout: 60000 });
     await page.waitForTimeout(5000);
-    fs.mkdirSync('debug-artifacts', { recursive: true });
-    await page.screenshot({ path: 'debug-artifacts/integrations-screen.png', fullPage: true });
+    await page.screenshot({ path: `${artifactDir}/step-1-integrations.png`, fullPage: true });
 
-    // Step 1: Click API Card
-    await page.locator('.zp_Y4xXE', { hasText: 'API' }).click();
+    // 🔍 Click the correct API card by text fallback
+    const cards = await page.locator('.zp_Y4xXE').all();
+    let clicked = false;
+
+    for (let i = 0; i < cards.length; i++) {
+      const cardText = await cards[i].textContent();
+      if (cardText?.includes("Programmatically access Apollo")) {
+        await cards[i].click();
+        clicked = true;
+        break;
+      }
+    }
+
+    if (!clicked) throw new Error("❌ Could not find API card to click.");
     await page.waitForTimeout(3000);
+    await page.screenshot({ path: `${artifactDir}/step-2-api-card-clicked.png`, fullPage: true });
 
-    // Step 2: Click Usage Tab
+    // ✅ Click Usage tab
     await page.getByText('Usage', { exact: true }).click();
     await page.waitForTimeout(3000);
 
-    // Step 3: Scrape usage
     await page.waitForSelector('.progress-bar-subtitle', { timeout: 30000 });
     const usageText = await page.locator('.progress-bar-subtitle').first().textContent();
     const match = usageText?.match(/(\d+)\s*\/\s*(\d+)/);
@@ -32,18 +46,18 @@ const { google } = require('googleapis');
     const limit = parseInt(match[2], 10);
     const creditsLeft = limit - used;
 
-    console.log(`📊 Used: ${used} of ${limit} → Left: ${creditsLeft}`);
+    console.log(`📊 Used: ${used} / ${limit} → Left: ${creditsLeft}`);
+    await page.screenshot({ path: `${artifactDir}/step-3-usage-confirmed.png`, fullPage: true });
+
     await pushToGoogleSheet({ creditsLeft });
     console.log("✅ Logged to Apollo Daily.");
   } catch (err) {
     console.error("❌ Error:", err.message);
-    fs.mkdirSync('debug-artifacts', { recursive: true });
-    fs.writeFileSync('debug-artifacts/dev-usage-error.txt', err.stack || err.message);
+    fs.writeFileSync(`${artifactDir}/error.txt`, err.stack || err.message);
     try {
-      await page.screenshot({ path: 'debug-artifacts/dev-usage-error.png', fullPage: true });
-      console.log("🖼️ Saved failure screenshot.");
+      await page.screenshot({ path: `${artifactDir}/error.png`, fullPage: true });
     } catch (screenshotErr) {
-      console.error("⚠️ Could not capture screenshot:", screenshotErr.message);
+      console.error("⚠️ Could not save error screenshot:", screenshotErr.message);
     }
   } finally {
     await browser.close();
