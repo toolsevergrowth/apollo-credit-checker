@@ -1,0 +1,40 @@
+name: Apollo Developer Usage (Hourly)
+
+on:
+  schedule:
+    - cron: "0 * * * *"  # Every hour UTC
+  workflow_dispatch:
+
+jobs:
+  run-hourly:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 🛎️ Checkout repo
+        uses: actions/checkout@master
+
+      - name: 📦 Install dependencies
+        run: npm install
+
+      - name: 🔐 Restore storageState.json from secret
+        run: echo "$APOLLO_STORAGE_BASE64" | base64 -d > storageState.json
+        shell: bash
+        env:
+          APOLLO_STORAGE_BASE64: ${{ secrets.APOLLO_STORAGE_BASE64 }}
+
+      - name: 🧪 Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: 🚀 Run developer usage script
+        run: node hourly.js
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          GOOGLE_SERVICE_ACCOUNT_EMAIL: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_EMAIL }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+
+      - name: 📤 Upload debug artifacts
+        if: always()
+        uses: actions/upload-artifact@master
+        with:
+          name: apollo-dev-debug
+          path: debug-artifacts
