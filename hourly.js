@@ -16,9 +16,16 @@ const { google } = require('googleapis');
     await page.waitForTimeout(5000);
     await page.screenshot({ path: `${artifactDir}/step-1-integrations.png`, fullPage: true });
 
-    // 🔄 Scroll to load the API card
-    await page.mouse.wheel(0, 2000);
-    await page.waitForTimeout(1500);
+    // 🔽 Scroll the inner container to reveal hidden integration cards (like API)
+    console.log("🔄 Scrolling inner content to expose API card...");
+    await page.evaluate(() => {
+      const scrollable = document.querySelector('[class*=scroll], main, body');
+      if (scrollable) {
+        scrollable.scrollTo({ top: scrollable.scrollHeight, behavior: 'smooth' });
+      }
+    });
+    await page.waitForTimeout(2500);
+    await page.screenshot({ path: `${artifactDir}/step-1b-after-scroll.png`, fullPage: true });
 
     // 🔍 Find and click the API card
     const cards = await page.locator('.zp_Y4xXE').all();
