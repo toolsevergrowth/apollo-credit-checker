@@ -8,24 +8,11 @@ const { google } = require('googleapis');
   const page = await context.newPage();
 
   try {
-    console.log("🌐 Navigating to Apollo Home...");
+    console.log("🌐 Navigating to Apollo...");
     await page.goto('https://app.apollo.io/#/home?sortByField=latest_reply_received_at', { timeout: 60000 });
     await page.waitForTimeout(5000);
-
     fs.mkdirSync('debug-artifacts', { recursive: true });
     await page.screenshot({ path: 'debug-artifacts/home-screen.png', fullPage: true });
-
-    const errorBanner = page.locator('text=trouble displaying this content');
-    if (await errorBanner.isVisible()) {
-      console.warn("⚠️ Apollo dashboard error detected. Reloading...");
-      await page.reload();
-      await page.waitForTimeout(6000);
-      await page.screenshot({ path: 'debug-artifacts/home-screen-retry.png', fullPage: true });
-
-      if (await errorBanner.isVisible()) {
-        throw new Error("Apollo dashboard error persisted after reload. Aborting.");
-      }
-    }
 
     // Step 1: Click Admin Settings
     await page.getByText('Admin Settings', { exact: true }).click();
