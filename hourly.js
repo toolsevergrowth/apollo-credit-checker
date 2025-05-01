@@ -8,29 +8,21 @@ const { google } = require('googleapis');
   const page = await context.newPage();
 
   try {
-    console.log("🌐 Navigating to Apollo...");
-    await page.goto('https://app.apollo.io/#/home?sortByField=latest_reply_received_at', { timeout: 60000 });
+    console.log("🌐 Navigating directly to Apollo Integrations...");
+    await page.goto('https://app.apollo.io/#/settings/integrations', { timeout: 60000 });
     await page.waitForTimeout(5000);
     fs.mkdirSync('debug-artifacts', { recursive: true });
-    await page.screenshot({ path: 'debug-artifacts/home-screen.png', fullPage: true });
+    await page.screenshot({ path: 'debug-artifacts/integrations-screen.png', fullPage: true });
 
-    // Step 1: Click Admin Settings
-    await page.getByText('Admin Settings', { exact: true }).click();
-    await page.waitForTimeout(1000);
-
-    // Step 2: Click Integrations
-    await page.locator('#ma4mqg15').click();
-    await page.waitForTimeout(2000);
-
-    // Step 3: Click API Card
+    // Step 1: Click API Card
     await page.locator('.zp_Y4xXE', { hasText: 'API' }).click();
     await page.waitForTimeout(3000);
 
-    // Step 4: Click Usage Tab
+    // Step 2: Click Usage Tab
     await page.getByText('Usage', { exact: true }).click();
     await page.waitForTimeout(3000);
 
-    // Step 5: Scrape usage
+    // Step 3: Scrape usage
     await page.waitForSelector('.progress-bar-subtitle', { timeout: 30000 });
     const usageText = await page.locator('.progress-bar-subtitle').first().textContent();
     const match = usageText?.match(/(\d+)\s*\/\s*(\d+)/);
