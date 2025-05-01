@@ -18,21 +18,21 @@ const { google } = require('googleapis');
 
     const used = parseInt(match[1], 10);
     const limit = parseInt(match[2], 10);
-    const percentUsed = ((used / limit) * 100).toFixed(2);
+    const creditsLeft = limit - used;
 
-    console.log(`📊 Developer Usage — Used: ${used}, Limit: ${limit}, Percent: ${percentUsed}%`);
-
-    await pushToGoogleSheet({ used, limit, percentUsed });
+    console.log(`📊 Developer Usage — Used: ${used} of ${limit} → Left: ${creditsLeft}`);
+    await pushToGoogleSheet({ creditsLeft });
     console.log("✅ Data pushed to 'Apollo Daily' sheet.");
   } catch (err) {
     console.error("❌ Error:", err.message);
+    fs.mkdirSync('debug-artifacts', { recursive: true });
     fs.writeFileSync('debug-artifacts/dev-usage-error.txt', err.stack || err.message);
   } finally {
     await browser.close();
   }
 })();
 
-async function pushToGoogleSheet({ used, limit, percentUsed }) {
+async function pushToGoogleSheet({ creditsLeft }) {
   const timestamp = new Date().toLocaleString('en-US', {
     timeZone: 'Europe/Vilnius',
     year: 'numeric',
@@ -64,12 +64,12 @@ async function pushToGoogleSheet({ used, limit, percentUsed }) {
 
   await sheets.spreadsheets.values.update({
     spreadsheetId,
-    range: `Apollo Daily!A${rowNum}:D${rowNum}`,
+    range: `Apollo Daily!A${rowNum}:B${rowNum}`,
     valueInputOption: 'USER_ENTERED',
     requestBody: {
-      values: [[timestamp, used, limit, percentUsed]],
+      values: [[timestamp, creditsLeft]],
     },
   });
 
-  console.log(`📤 Wrote to Apollo Daily → Row ${rowNum}: [${timestamp}, ${used}, ${limit}, ${percentUsed}%]`);
+  console.log(`📤 Wrote to Apollo Daily → Row ${rowNum}: [${timestamp}, ${creditsLeft}]`);
 }
